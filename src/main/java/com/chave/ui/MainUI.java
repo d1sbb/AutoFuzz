@@ -8,19 +8,16 @@ import com.chave.config.UserConfig;
 import com.chave.pojo.Data;
 import com.chave.pojo.FuzzRequestItem;
 import com.chave.pojo.OriginRequestItem;
+import com.chave.pojo.SearchScope;
 import com.chave.utils.Util;
 
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
-import javax.swing.table.TableCellRenderer;
+import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 
 @lombok.Data
@@ -63,12 +60,15 @@ public class MainUI {
     private JCheckBox listenRepeterCheckBox;
     private JCheckBox includeSubDomainCheckBox;
     private JCheckBox emptyParamCheckBox;
+    private JCheckBox paramURLEncodeCheckBox;
     private JLabel basicTitleLabel;
     private JLabel domainTitleLabel;
     private JLabel payloadTitleLabel;
     private JTextField searchTextField;
-    HttpRequestEditor requestEditor;
-    HttpResponseEditor responseEditor;
+    private JComboBox<String> searchScopeComboBox;
+    private HttpRequestEditor requestEditor;
+    private HttpResponseEditor responseEditor;
+    private HashMap<Integer, ArrayList<Integer>> highlightMap;
 
 
     public MainUI() {
@@ -98,6 +98,7 @@ public class MainUI {
         listenProxyCheckBox = new JCheckBox("监听Proxy");
         listenRepeterCheckBox = new JCheckBox("监听Repeter");
         emptyParamCheckBox = new JCheckBox("参数置空");
+        paramURLEncodeCheckBox = new JCheckBox("URL编码");
         addDomainButton = new JButton("添加");
         editDomainButton = new JButton("编辑");
         removeDomainButton = new JButton("删除");
@@ -114,7 +115,7 @@ public class MainUI {
         payloadTitleLabel = new JLabel("---------------------------Payload设置---------------------------");
         requestEditor = Main.API.userInterface().createHttpRequestEditor(EditorOptions.READ_ONLY);
         responseEditor = Main.API.userInterface().createHttpResponseEditor(EditorOptions.READ_ONLY);
-
+        highlightMap = new HashMap<>();  // 这里防止空指针 后面还会重新初始化
 
         // 创建左边表格
         String[] originRequestItemTableColumnName = {"Host", "Path", "返回包长度", "响应码"};
@@ -255,6 +256,8 @@ public class MainUI {
         payloadOperatePanel.add(removePayloadButton, Component.CENTER_ALIGNMENT);
         payloadOperatePanel.add(Box.createVerticalStrut(10));
         payloadOperatePanel.add(emptyParamCheckBox, Component.CENTER_ALIGNMENT);
+        payloadOperatePanel.add(Box.createVerticalStrut(10));
+        payloadOperatePanel.add(paramURLEncodeCheckBox, Component.CENTER_ALIGNMENT);
         payloadMainPanel.add(Box.createHorizontalStrut(5));
         payloadMainPanel.add(payloadOperatePanel);
         // 初始化payload表格
@@ -310,8 +313,15 @@ public class MainUI {
         BoxLayout rightTopLayout = new BoxLayout(rightTopPanel, BoxLayout.Y_AXIS);
         rightTopPanel.setLayout(rightTopLayout);
         // 搜索框绘制
+        String[] searchScopeOptions = {"request", "response"};
+        searchScopeComboBox = new JComboBox<>(searchScopeOptions);
+        searchScopeComboBox.setSelectedItem("request");
+        UserConfig.SEARCH_SCOPE = SearchScope.REQUEST;
         BoxLayout searchPanelLayout = new BoxLayout(searchPanel, BoxLayout.X_AXIS);
         searchPanel.setLayout(searchPanelLayout);
+        searchPanel.add(Box.createHorizontalStrut(2));
+        searchPanel.add(searchScopeComboBox);
+        searchPanel.add(Box.createHorizontalStrut(2));
         searchPanel.add(searchTextField);
         searchPanel.add(Box.createHorizontalStrut(2));
         searchPanel.add(searchButton);
@@ -338,6 +348,49 @@ public class MainUI {
         mainSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftPanel, rightSplitPane);
         mainSplitPane.setDividerLocation(300);
         mainSplitPane.setEnabled(false);
+
+        for (int i = 0; i < originRequestItemTable.getColumnCount(); i++) {
+            originRequestItemTable.getColumnModel().getColumn(i).setCellRenderer(new DefaultTableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                    // 调用默认的渲染器来获取单元格组件
+                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+                    if (highlightMap.containsKey(row)) {
+                        c.setForeground(Color.RED);
+                    } else {
+                        c.setForeground(Color.BLACK);
+                    }
+
+                    return c;
+                }
+            });
+        }
+
+        for (int i = 0; i < fuzzRequestItemTable.getColumnCount(); i++) {
+            fuzzRequestItemTable.getColumnModel().getColumn(i).setCellRenderer(new DefaultTableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                    // 调用默认的渲染器来获取单元格组件
+                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+                    try {
+                        int originRequestSelectedRow = originRequestItemTable.getSelectedRows()[0];
+
+                        if (highlightMap.get(originRequestSelectedRow).contains(row)) {
+                            c.setForeground(Color.RED);
+                        } else {
+                            c.setForeground(Color.BLACK);
+                        }
+                    } catch (Exception e) {
+                        c.setForeground(Color.BLACK);
+                    }
+
+                    return c;
+                }
+            });
+        }
+
 
 
         // 设置启用插件复选框监听器
@@ -456,6 +509,17 @@ public class MainUI {
             }
         });
 
+        paramURLEncodeCheckBox.addItemListener((new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    UserConfig.PARAM_URL_ENCODE = Boolean.TRUE;
+                } else if (e.getStateChange() == ItemEvent.DESELECTED) {
+                    UserConfig.PARAM_URL_ENCODE = Boolean.FALSE;
+                }
+            }
+        }));
+
         // 包含子域名复选框监听器
         includeSubDomainCheckBox.addItemListener(new ItemListener() {
             @Override
@@ -465,6 +529,47 @@ public class MainUI {
                 } else if (e.getStateChange() == ItemEvent.DESELECTED) {
                     UserConfig.INCLUDE_SUBDOMAIN = Boolean.FALSE;
                 }
+            }
+        });
+
+        // 查找作用域下拉框监听器
+        searchScopeComboBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // 获取用户选择
+                String selectedOption = (String) searchScopeComboBox.getSelectedItem();
+
+                if (SearchScope.REQUEST.scopeName().equals(selectedOption)) {
+                    UserConfig.SEARCH_SCOPE = SearchScope.REQUEST;
+                } else if (SearchScope.RESPONSE.scopeName().equals(selectedOption)) {
+                    UserConfig.SEARCH_SCOPE = SearchScope.RESPONSE;
+                }
+            }
+        });
+
+
+        // 查找按钮监听器
+        searchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String keyword = searchTextField.getText().trim();
+
+                if (UserConfig.SEARCH_SCOPE == SearchScope.REQUEST) {
+                    searchAllRequestResponse(keyword, SearchScope.REQUEST);
+                } else if (UserConfig.SEARCH_SCOPE == SearchScope.RESPONSE) {
+                    searchAllRequestResponse(keyword, SearchScope.RESPONSE);
+                }
+            }
+        });
+
+        // 清空查找结果按钮监听器
+        cleanSearchResultButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                highlightMap.clear();
+
+                originRequestItemTable.repaint();
+                fuzzRequestItemTable.repaint();
             }
         });
 
@@ -488,7 +593,7 @@ public class MainUI {
                 }
 
                 if (fuzzRequestItemRow >= 0) {
-                    FuzzRequestItem fuzzRequestItem = selectedOriginRequestItem.getFuzzRequestItemArrayList().get(fuzzRequestItemRow);
+                    FuzzRequestItem fuzzRequestItem = selectedOriginRequestItem.getFuzzRequestArrayList().get(fuzzRequestItemRow);
                     requestEditor.setRequest(fuzzRequestItem.getFuzzRequestResponse().request());
                     responseEditor.setResponse(fuzzRequestItem.getFuzzRequestResponse().response());
                 }
@@ -517,7 +622,7 @@ public class MainUI {
                 responseEditor.setResponse(clickedItem.getOriginResponse());
 
                 // 刷新fuzzRequestItem列表
-                ArrayList<FuzzRequestItem> fuzzRequestItemArrayList = clickedItem.getFuzzRequestItemArrayList();
+                ArrayList<FuzzRequestItem> fuzzRequestItemArrayList = clickedItem.getFuzzRequestArrayList();
                 fuzzRequestItemTableModel.setRowCount(0);
                 for (FuzzRequestItem fuzzRequestItem : fuzzRequestItemArrayList) {
                     fuzzRequestItemTableModel.addRow(new Object[]{fuzzRequestItem.getParam(), fuzzRequestItem.getPayload(), fuzzRequestItem.getResponseLengthChange(), fuzzRequestItem.getResponseCode()});
@@ -590,4 +695,68 @@ public class MainUI {
             }
         }
     }
+
+    private void searchAllRequestResponse(String keyword, SearchScope searchScope) {
+        // 先初始化map
+        highlightMap = new HashMap<>();
+
+        // 获取列表中所有origin的行
+        TableModel model = originRequestItemTable.getModel();
+        int rowCount = model.getRowCount();
+
+        for (int i = 0; i < rowCount; i++) {
+            // 由于顺序不一样 根据表中的值先创建一个originRequest
+            String host = (String) model.getValueAt(i, 0);
+            String path = (String) model.getValueAt(i, 1);
+            OriginRequestItem selectOriginRequestItem = new OriginRequestItem(host, path, null, null);
+
+            // 遍历data中的数据找到对应的originRequest 检查内容
+            for (Map.Entry<Integer, OriginRequestItem> originRequestItemEntry : Data.ORIGIN_REQUEST_TABLE_DATA.entrySet()) {
+                OriginRequestItem originRequestItem = originRequestItemEntry.getValue();
+                if (originRequestItem.equals(selectOriginRequestItem)) {
+                    String originRequestString = originRequestItem.getOriginRequest().toString();
+                    String originResponseString = originRequestItem.getOriginResponse().toString();
+                    // 进行不区分大小写的比对originRequest
+                    if (originRequestString.toLowerCase().contains(keyword.toLowerCase()) && searchScope.equals(SearchScope.REQUEST)) {
+                        highlightMap.put(i, new ArrayList<>());
+                    } else if (originResponseString.toLowerCase().contains(keyword.toLowerCase()) && searchScope.equals(SearchScope.RESPONSE)) {
+                        highlightMap.put(i, new ArrayList<>());
+                    }
+
+                    // 比对fuzzRequest
+                    ArrayList<FuzzRequestItem> fuzzRequestArrayList = originRequestItem.getFuzzRequestArrayList();
+                    int index = 0;
+                    for (FuzzRequestItem fuzzRequestItem : fuzzRequestArrayList) {
+                        String fuzzRequestString = fuzzRequestItem.getFuzzRequestResponse().request().toString();
+                        String fuzzResponseString = fuzzRequestItem.getFuzzRequestResponse().response().toString();
+                        if (fuzzRequestString.toLowerCase().contains(keyword.toLowerCase()) && searchScope.equals(SearchScope.REQUEST)) {
+                            if (highlightMap.containsKey(i)) {
+                                highlightMap.get(i).add(index);
+                            } else {  // 如果originRequest没匹配到 fuzzRequest匹配到了 也加入map
+                                ArrayList<Integer> fuzzRequestHighlightList = new ArrayList<>();
+                                fuzzRequestHighlightList.add(index);
+                                highlightMap.put(i, fuzzRequestHighlightList);
+                            }
+                        } else if (fuzzResponseString.toLowerCase().contains(keyword.toLowerCase()) && searchScope.equals(SearchScope.RESPONSE)) {
+                            if (highlightMap.containsKey(i)) {
+                                highlightMap.get(i).add(index);
+                            } else {  // 如果originResponse没匹配到 fuzzResponse匹配到了 也加入map
+                                ArrayList<Integer> fuzzRequestHighlightList = new ArrayList<>();
+                                fuzzRequestHighlightList.add(index);
+                                highlightMap.put(i, fuzzRequestHighlightList);
+                            }
+                        }
+
+                        index++;
+                    }
+                }
+            }
+
+            // 遍历完之后 重新渲染表格
+            originRequestItemTable.repaint();
+            fuzzRequestItemTable.repaint();
+        }
+    }
+
+
 }

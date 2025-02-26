@@ -1,6 +1,5 @@
 package com.chave.pojo;
 
-import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.http.message.responses.HttpResponse;
 import lombok.Data;
@@ -13,7 +12,7 @@ public class OriginRequestItem {
     private String path;
     private String responseLength;
     private String responseCode;
-    private ArrayList<FuzzRequestItem> fuzzRequestItemArrayList;
+    private ArrayList<FuzzRequestItem> fuzzRequestArrayList;
     private HttpRequest originRequest;
     private HttpResponse originResponse;
 
@@ -22,7 +21,7 @@ public class OriginRequestItem {
         this.path = path;
         this.responseLength = responseLength;
         this.responseCode = responseCode;
-        this.fuzzRequestItemArrayList = new ArrayList<>();
+        this.fuzzRequestArrayList = new ArrayList<>();
     }
 
     @Override

@@ -2,27 +2,35 @@ package com.chave.utils;
 
 import com.chave.Main;
 import com.chave.pojo.Data;
-import com.chave.pojo.FuzzRequestItem;
 import com.chave.pojo.OriginRequestItem;
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.util.ArrayList;
-import java.util.Map;
 
 public class Util {
 
     // 刷新fuzz请求列表
-    public static void addOriginRequestItem(OriginRequestItem item) {
+    public static synchronized void addOriginRequestItem(OriginRequestItem item) {
         JTable originRequestItemTable = Main.MainUI.getOriginRequestItemTable();
         DefaultTableModel model = (DefaultTableModel) originRequestItemTable.getModel();
 
         model.addRow(new Object[]{item.getHost(), item.getPath(), item.getResponseLength(), item.getResponseCode()});
     }
 
+    public static String fullyURLEncode(String input) throws UnsupportedEncodingException {
+        StringBuilder encodedString = new StringBuilder();
 
+        // Iterate over each character in the input string
+        for (char ch : input.toCharArray()) {
+            // Encode each character to its %XX format
+            encodedString.append(String.format("%%%02X", (int) ch));
+        }
+
+        return encodedString.toString();
+    }
 
     // 刷新domain表格
     public static synchronized void flushConfigTable(String type, JTable table) {
@@ -140,5 +148,21 @@ public class Util {
         }
 
         return encodedString.toString();
+    }
+
+
+    public static Object isNumber(String value) {
+        // 尝试将字符串转化为整数
+        try {
+            return Integer.parseInt(value);  // 如果能转化为整数，返回整数
+        } catch (NumberFormatException e1) {
+            // 如果转换为整数失败，尝试将其转化为 BigDecimal
+            try {
+                return new BigDecimal(value);  // 如果能转化为 BigDecimal，返回 BigDecimal
+            } catch (NumberFormatException e2) {
+                // 如果无法转换为整数或 BigDecimal，返回原始的字符串
+                return value;
+            }
+        }
     }
 }

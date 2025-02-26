@@ -7,6 +7,6 @@ public class Config {
             ".tiff", ".webp", ".mp4", ".mp3", ".ogg", ".wav", ".flv", ".avi", ".mov",
             ".mkv", ".zip", ".tar", ".gzip", ".pdf", ".txt", ".csv", ".xls", ".xlsx",
             ".xml", ".yaml", ".md", ".rtf", ".ico", ".woff", ".woff2", ".eot", ".otf",
-            ".ttf", ".svg", ".csv"
+            ".ttf", ".svg", ".csv", "js.map"
     };
 }
