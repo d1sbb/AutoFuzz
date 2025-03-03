@@ -35,7 +35,7 @@ public class AutoFuzzHandler implements HttpHandler {
                             autoFuzzService.preFuzz(requestToBeSent);
                         }
                         break;
-                    } else if (UserConfig.INCLUDE_SUBDOMAIN && host.contains(domain)) {
+                    } else if (UserConfig.INCLUDE_SUBDOMAIN && host.endsWith(domain)) {
                         // 预检查
                         if (fuzzPreCheck(requestToBeSent, host)) {
                             autoFuzzService.preFuzz(requestToBeSent);
@@ -117,7 +117,7 @@ public class AutoFuzzHandler implements HttpHandler {
     private static boolean checkIsFuzzed(HttpRequestToBeSent requestToBeSent, String host) {
         for (Map.Entry<Integer, OriginRequestItem> entry : Data.ORIGIN_REQUEST_TABLE_DATA.entrySet()) {
             OriginRequestItem item = entry.getValue();
-            OriginRequestItem tempItem = new OriginRequestItem(host, requestToBeSent.pathWithoutQuery(), null, null);
+            OriginRequestItem tempItem = new OriginRequestItem(null, requestToBeSent.method(), host, requestToBeSent.pathWithoutQuery(), null, null);
             if (item.equals(tempItem)) {
                 return true;
             }

@@ -16,9 +16,8 @@ import javax.swing.border.TitledBorder;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.List;
 
 @lombok.Data
 public class MainUI {
@@ -38,6 +37,9 @@ public class MainUI {
     private JPanel cleanRequestListPanel;
     private JPanel payloadMainPanel;
     private JPanel payloadOperatePanel;
+    private JPanel authHeaderTitlePanel;
+    private JPanel authHeaderMainPanel;
+    private JPanel authHeaderOperatePanel;
     private JPanel searchPanel;
     private JPanel tablePanel;
     private JSplitPane mainSplitPane;
@@ -46,6 +48,7 @@ public class MainUI {
     private JTable originRequestItemTable;
     private JTable domainTable;
     private JTable payloadTable;
+    private JTable authHeaderTable;
     private JButton addDomainButton;
     private JButton removeDomainButton;
     private JButton cleanFuzzRequestItemButton;
@@ -55,15 +58,20 @@ public class MainUI {
     private JButton removePayloadButton;
     private JButton searchButton;
     private JButton cleanSearchResultButton;
+    private JButton addAuthHeaderButton;
+    private JButton editAuthHeaderButton;
+    private JButton removeAuthHeaderButton;
     private JCheckBox turnOnCheckBox;
     private JCheckBox listenProxyCheckBox;
     private JCheckBox listenRepeterCheckBox;
     private JCheckBox includeSubDomainCheckBox;
     private JCheckBox emptyParamCheckBox;
     private JCheckBox paramURLEncodeCheckBox;
+    private JCheckBox unauthCheckBox;
     private JLabel basicTitleLabel;
     private JLabel domainTitleLabel;
     private JLabel payloadTitleLabel;
+    private JLabel authHeaderTitleLabel;
     private JTextField searchTextField;
     private JComboBox<String> searchScopeComboBox;
     private HttpRequestEditor requestEditor;
@@ -92,6 +100,9 @@ public class MainUI {
         payloadTitlePanel = new JPanel();
         payloadMainPanel = new JPanel();
         payloadOperatePanel = new JPanel();
+        authHeaderTitlePanel = new JPanel();
+        authHeaderMainPanel = new JPanel();
+        authHeaderOperatePanel = new JPanel();
         searchPanel = new JPanel();
         tablePanel = new JPanel();
         turnOnCheckBox = new JCheckBox("启用插件");
@@ -99,6 +110,8 @@ public class MainUI {
         listenRepeterCheckBox = new JCheckBox("监听Repeter");
         emptyParamCheckBox = new JCheckBox("参数置空");
         paramURLEncodeCheckBox = new JCheckBox("URL编码");
+        includeSubDomainCheckBox = new JCheckBox("包含子域名");
+        unauthCheckBox = new JCheckBox("未授权访问");
         addDomainButton = new JButton("添加");
         editDomainButton = new JButton("编辑");
         removeDomainButton = new JButton("删除");
@@ -108,40 +121,78 @@ public class MainUI {
         removePayloadButton = new JButton("删除");
         searchButton = new JButton("查找");
         cleanSearchResultButton = new JButton("清空查找结果");
-        includeSubDomainCheckBox = new JCheckBox("包含子域名");
+        addAuthHeaderButton = new JButton("添加");
+        editAuthHeaderButton = new JButton("编辑");
+        removeAuthHeaderButton = new JButton("删除");
         searchTextField = new JTextField();
         basicTitleLabel = new JLabel("-----------------------------基本功能-----------------------------");
         domainTitleLabel = new JLabel("-----------------------------域名设置-----------------------------");
         payloadTitleLabel = new JLabel("---------------------------Payload设置---------------------------");
+        authHeaderTitleLabel = new JLabel("-------------------------Auth Header设置-------------------------");
         requestEditor = Main.API.userInterface().createHttpRequestEditor(EditorOptions.READ_ONLY);
         responseEditor = Main.API.userInterface().createHttpResponseEditor(EditorOptions.READ_ONLY);
         highlightMap = new HashMap<>();  // 这里防止空指针 后面还会重新初始化
 
-        // 创建左边表格
-        String[] originRequestItemTableColumnName = {"Host", "Path", "返回包长度", "响应码"};
-        DefaultTableModel originRequestItemTableModel = new DefaultTableModel(originRequestItemTableColumnName, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return true;
+        /**
+         * **自定义 TableModel，确保 ID 列按数值大小排序**
+         */
+        class SortedTableModel extends DefaultTableModel {
+            public SortedTableModel(Object[] columnNames, int rowCount) {
+                super(columnNames, rowCount);
             }
-        };
+
+            @Override
+            public void addRow(Object[] rowData) {
+                super.addRow(rowData);
+                sortData(); // 添加数据后自动排序
+                fireTableDataChanged(); // 通知 UI 更新
+            }
+
+            @Override
+            public void removeRow(int row) {
+                super.removeRow(row);
+                sortData(); // 删除数据后自动排序
+                fireTableDataChanged(); // 通知 UI 更新
+            }
+
+            @Override
+            public void fireTableDataChanged() {
+                sortData(); // 确保每次数据更新后排序
+                super.fireTableDataChanged();
+            }
+
+            /**
+             * **对数据按 ID（第 0 列）排序**
+             */
+            private void sortData() {
+                // 获取数据
+                Vector<Vector> dataVector = getDataVector();
+                // 按照 ID 列（第 0 列）升序排序
+                dataVector.sort((v1, v2) -> {
+                    Integer id1 = (Integer) v1.get(0);  // 获取第 0 列 ID，强制转换为 Integer
+                    Integer id2 = (Integer) v2.get(0);  // 获取第 0 列 ID，强制转换为 Integer
+                    return id1.compareTo(id2);  // 按升序排序
+                });
+            }
+        }
+
+        // 创建左边表格
+        String[] originRequestItemTableColumnName = {"#", "Method", "Host", "Path", "返回包长度", "状态码"};
+        SortedTableModel originRequestItemTableModel = new SortedTableModel(originRequestItemTableColumnName, 0);
         originRequestItemTable = new JTable(originRequestItemTableModel);
-        // 设置表头背景
-        JTableHeader originRequestItemTableHeader = originRequestItemTable.getTableHeader();
-        originRequestItemTableHeader.setBackground(new Color(230, 230, 230));
+        // 设置列默认宽度
+        originRequestItemTable.getColumnModel().getColumn(0).setPreferredWidth(20);
+        originRequestItemTable.getColumnModel().getColumn(1).setPreferredWidth(30);
+        originRequestItemTable.getColumnModel().getColumn(4).setPreferredWidth(50);
+        originRequestItemTable.getColumnModel().getColumn(5).setPreferredWidth(20);
         // 禁止整个表格编辑
         originRequestItemTable.setDefaultEditor(Object.class, null);
-        // 设置0,2,3列数据居中对齐
-        TableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-        ((DefaultTableCellRenderer) centerRenderer).setHorizontalAlignment(SwingConstants.CENTER);
-        originRequestItemTable.getColumnModel().getColumn(2).setCellRenderer(centerRenderer);
-        originRequestItemTable.getColumnModel().getColumn(3).setCellRenderer(centerRenderer);
         // 创建表格滚动面板
         JScrollPane originRequestItemTableScrollPane = new JScrollPane(originRequestItemTable);
 
 
         // 创建右边表格
-        String[] fuzzRequestItemTableColumnName = {"Param", "Payload", "返回包变化", "响应码"};
+        String[] fuzzRequestItemTableColumnName = {"Param", "Payload", "返回包变化", "状态码"};
         DefaultTableModel fuzzRequestItemTableModel = new DefaultTableModel(fuzzRequestItemTableColumnName, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -149,16 +200,8 @@ public class MainUI {
             }
         };
         fuzzRequestItemTable = new JTable(fuzzRequestItemTableModel);
-        // 设置表头背景
-        JTableHeader fuzzRequestItemTableHeader = fuzzRequestItemTable.getTableHeader();
-        fuzzRequestItemTableHeader.setBackground(new Color(230, 230, 230));
         // 禁止整个表格编辑
         fuzzRequestItemTable.setDefaultEditor(Object.class, null);
-        // 设置0,1,2,3列数据居中对齐
-        fuzzRequestItemTable.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
-        fuzzRequestItemTable.getColumnModel().getColumn(1).setCellRenderer(centerRenderer);
-        fuzzRequestItemTable.getColumnModel().getColumn(2).setCellRenderer(centerRenderer);
-        fuzzRequestItemTable.getColumnModel().getColumn(3).setCellRenderer(centerRenderer);
         // 创建表格滚动面板
         JScrollPane fuzzRequestItemTableScrollPane = new JScrollPane(fuzzRequestItemTable);
 
@@ -167,16 +210,19 @@ public class MainUI {
         // 设置左边主面板布局
         BoxLayout leftBoxLayout = new BoxLayout(leftPanel, BoxLayout.Y_AXIS);
         leftPanel.setLayout(leftBoxLayout);
-        // 设置三个标题label
+        // 设置四个标题label
         BoxLayout basicTitleLayout = new BoxLayout(basicTitlePanel, BoxLayout.X_AXIS);
         BoxLayout domainTitleLayout = new BoxLayout(domainTitlePanel, BoxLayout.X_AXIS);
         BoxLayout payloadTitleLayout = new BoxLayout(payloadTitlePanel, BoxLayout.X_AXIS);
+        BoxLayout authHeaderTitleLayout = new BoxLayout(authHeaderTitlePanel, BoxLayout.X_AXIS);
         basicTitlePanel.setLayout(basicTitleLayout);
         domainTitlePanel.setLayout(domainTitleLayout);
         payloadTitlePanel.setLayout(payloadTitleLayout);
+        authHeaderTitlePanel.setLayout(authHeaderTitleLayout);
         basicTitlePanel.add(basicTitleLabel, Component.CENTER_ALIGNMENT);
         domainTitlePanel.add(domainTitleLabel, Component.CENTER_ALIGNMENT);
         payloadTitlePanel.add(payloadTitleLabel, Component.CENTER_ALIGNMENT);
+        authHeaderTitlePanel.add(authHeaderTitleLabel, Component.CENTER_ALIGNMENT);
         // 设置复选框默认勾选状态 居中放置
         BoxLayout turnOnLayout = new BoxLayout(turnOnPanel, BoxLayout.X_AXIS);
         turnOnPanel.setLayout(turnOnLayout);
@@ -231,11 +277,7 @@ public class MainUI {
         domainTable = new JTable(domainModel);
         // 支持多行选中
         domainTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-        // 设置表头背景
-        JTableHeader domainTableHeader = domainTable.getTableHeader();
-        domainTableHeader.setBackground(new Color(230, 230, 230));
         // 禁止表格编辑
-//        domainTable.getColumnModel().getColumn(0).setCellEditor(disabledEditor);
         domainTable.setDefaultEditor(Object.class, null);
         // 创建表格滚动面板
         JScrollPane domainTableScrollPane = new JScrollPane(domainTable);
@@ -274,17 +316,54 @@ public class MainUI {
         // 禁止表格编辑
 //        payloadTable.getColumnModel().getColumn(0).setCellEditor(disabledEditor);
         payloadTable.setDefaultEditor(Object.class, null);
-        // 设置表头背景
-        JTableHeader payloadTableHeader = payloadTable.getTableHeader();
-        payloadTableHeader.setBackground(new Color(230, 230, 230));
         // 创建表格滚动面板
         JScrollPane payloadTableScrollPane = new JScrollPane(payloadTable);
         payloadTableScrollPane.setMaximumSize(new Dimension(150, 2000));
         payloadMainPanel.add(Box.createHorizontalStrut(11));
         payloadMainPanel.add(payloadTableScrollPane);
         payloadMainPanel.add(Box.createHorizontalStrut(5));
+
+
+        // Auth Header配置部分绘制
+        // 用户操作部分
+        BoxLayout authHeaderMainLayout = new BoxLayout(authHeaderMainPanel, BoxLayout.X_AXIS);
+        BoxLayout authHeaderOperateLayout = new BoxLayout(authHeaderOperatePanel, BoxLayout.Y_AXIS);
+        authHeaderMainPanel.setLayout(authHeaderMainLayout);
+        authHeaderOperatePanel.setLayout(authHeaderOperateLayout);
+        authHeaderOperatePanel.add(addAuthHeaderButton, Component.CENTER_ALIGNMENT);
+        authHeaderOperatePanel.add(Box.createVerticalStrut(10));
+        authHeaderOperatePanel.add(editAuthHeaderButton, Component.CENTER_ALIGNMENT);
+        authHeaderOperatePanel.add(Box.createVerticalStrut(10));
+        authHeaderOperatePanel.add(removeAuthHeaderButton, Component.CENTER_ALIGNMENT);
+        authHeaderOperatePanel.add(Box.createVerticalStrut(10));
+        authHeaderOperatePanel.add(unauthCheckBox, Component.CENTER_ALIGNMENT);
+        authHeaderMainPanel.add(Box.createHorizontalStrut(5));
+        authHeaderMainPanel.add(authHeaderOperatePanel);
+        // 初始化payload表格
+        String[] authHeaderTableColumnName = {"Header", "Value"};
+        DefaultTableModel authHeaderModel = new DefaultTableModel(authHeaderTableColumnName, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return true;
+            }
+        };
+        authHeaderTable = new JTable(authHeaderModel);
+        // 支持多行选中
+        authHeaderTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        // 禁止表格编辑
+        authHeaderTable.setDefaultEditor(Object.class, null);
+        // 设置首选宽度
+        authHeaderTable.getColumnModel().getColumn(0).setPreferredWidth(10);
+        // 创建表格滚动面板
+        JScrollPane authHeaderTableScrollPane = new JScrollPane(authHeaderTable);
+        authHeaderTableScrollPane.setMaximumSize(new Dimension(150, 2000));
+        authHeaderMainPanel.add(Box.createHorizontalStrut(5));
+        authHeaderMainPanel.add(authHeaderTableScrollPane);
+        authHeaderMainPanel.add(Box.createHorizontalStrut(5));
+
+
         // 左侧面板添加各个组件
-        leftPanel.add(Box.createVerticalStrut(30));
+        leftPanel.add(Box.createVerticalStrut(10));
         leftPanel.add(basicTitlePanel);
         leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(turnOnPanel);
@@ -294,15 +373,19 @@ public class MainUI {
         leftPanel.add(listenRepeterPanel);
         leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(cleanRequestListPanel);
-        leftPanel.add(Box.createVerticalStrut(30));
+        leftPanel.add(Box.createVerticalStrut(15));
         leftPanel.add(domainTitlePanel);
         leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(domainMainPanel);
-        leftPanel.add(Box.createVerticalStrut(30));
+        leftPanel.add(Box.createVerticalStrut(15));
         leftPanel.add(payloadTitlePanel);
         leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(payloadMainPanel);
-        leftPanel.add(Box.createVerticalStrut(30));
+        leftPanel.add(Box.createVerticalStrut(15));
+        leftPanel.add(authHeaderTitlePanel);
+        leftPanel.add(Box.createVerticalStrut(5));
+        leftPanel.add(authHeaderMainPanel);
+        leftPanel.add(Box.createVerticalStrut(10));
 
         BoxLayout tableLayout = new BoxLayout(tablePanel, BoxLayout.X_AXIS);
         tablePanel.setLayout(tableLayout);
@@ -356,10 +439,14 @@ public class MainUI {
                     // 调用默认的渲染器来获取单元格组件
                     Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 
+                    if (column == 0 || column == 1 || column == 4 || column == 5) {
+                        ((DefaultTableCellRenderer) c).setHorizontalAlignment(SwingConstants.CENTER);
+                    }
+
                     if (highlightMap.containsKey(row)) {
                         c.setForeground(Color.RED);
                     } else {
-                        c.setForeground(Color.BLACK);
+                        c.setForeground(originRequestItemTable.getForeground());
                     }
 
                     return c;
@@ -377,13 +464,17 @@ public class MainUI {
                     try {
                         int originRequestSelectedRow = originRequestItemTable.getSelectedRows()[0];
 
+                        if (column == 0 || column == 1 || column == 2 || column == 3) {
+                            ((DefaultTableCellRenderer) c).setHorizontalAlignment(SwingConstants.CENTER);
+                        }
+
                         if (highlightMap.get(originRequestSelectedRow).contains(row)) {
                             c.setForeground(Color.RED);
                         } else {
-                            c.setForeground(Color.BLACK);
+                            c.setForeground(originRequestItemTable.getForeground());
                         }
                     } catch (Exception e) {
-                        c.setForeground(Color.BLACK);
+                        c.setForeground(originRequestItemTable.getForeground());
                     }
 
                     return c;
@@ -459,6 +550,14 @@ public class MainUI {
             }
         });
 
+        // 添加域名按钮监听器
+        addAuthHeaderButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                showAddDataDialog("header");
+            }
+        });
+
         // 编辑域名按钮监听器
         editDomainButton.addActionListener(new ActionListener() {
             @Override
@@ -477,6 +576,15 @@ public class MainUI {
             }
         });
 
+        // 编辑AuthHeader按钮监听器
+        editAuthHeaderButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // 如果选中多行 默认编辑选中的第一行
+                showEditDataDialog("header", authHeaderTable.getSelectedRows()[0]);
+            }
+        });
+
         // 删除domain按钮监听器
         removeDomainButton.addActionListener(new ActionListener() {
             @Override
@@ -492,6 +600,15 @@ public class MainUI {
             public void actionPerformed(ActionEvent e) {
                 Util.removeConfigData("payload", payloadTable.getSelectedRows());
                 Util.flushConfigTable("payload", payloadTable);
+            }
+        });
+
+        // 删除payload按钮监听器
+        removeAuthHeaderButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Util.removeConfigData("header", authHeaderTable.getSelectedRows());
+                Util.flushConfigTable("header", authHeaderTable);
             }
         });
 
@@ -528,6 +645,18 @@ public class MainUI {
                     UserConfig.INCLUDE_SUBDOMAIN = Boolean.TRUE;
                 } else if (e.getStateChange() == ItemEvent.DESELECTED) {
                     UserConfig.INCLUDE_SUBDOMAIN = Boolean.FALSE;
+                }
+            }
+        });
+
+        // 包含子域名复选框监听器
+        unauthCheckBox.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    UserConfig.UNAUTH = Boolean.TRUE;
+                } else if (e.getStateChange() == ItemEvent.DESELECTED) {
+                    UserConfig.UNAUTH = Boolean.FALSE;
                 }
             }
         });
@@ -581,12 +710,14 @@ public class MainUI {
                 int originRequestItemRow = originRequestItemTable.getSelectedRows()[0];
                 int fuzzRequestItemRow = fuzzRequestItemTable.rowAtPoint(e.getPoint());
                 OriginRequestItem selectedOriginRequestItem = null;
-                String hostText = (String) originRequestItemTableModel.getValueAt(originRequestItemRow, 0);
-                String pathText = (String) originRequestItemTableModel.getValueAt(originRequestItemRow, 1);
-                OriginRequestItem tempItem = new OriginRequestItem(hostText, pathText, null, null);
+                Integer id = (Integer) originRequestItemTableModel.getValueAt(originRequestItemRow, 0);
+                String methodText = (String) originRequestItemTableModel.getValueAt(originRequestItemRow, 1);
+                String hostText = (String) originRequestItemTableModel.getValueAt(originRequestItemRow, 2);
+                String pathText = (String) originRequestItemTableModel.getValueAt(originRequestItemRow, 3);
+                OriginRequestItem tempItem = new OriginRequestItem(id, methodText, hostText, pathText, null, null);
                 for (Map.Entry<Integer, OriginRequestItem> entry : Data.ORIGIN_REQUEST_TABLE_DATA.entrySet()) {
                     OriginRequestItem item = entry.getValue();
-                    if (item.equals(tempItem)) {
+                    if (item.equals(tempItem) && item.getId().equals(id)) {
                         selectedOriginRequestItem = item;
                         break;
                     }
@@ -607,12 +738,14 @@ public class MainUI {
                 // 找到点击的条目
                 int originRequestItemRow = originRequestItemTable.rowAtPoint(e.getPoint());
                 OriginRequestItem clickedItem = null;
-                String hostText = (String) originRequestItemTableModel.getValueAt(originRequestItemRow, 0);
-                String pathText = (String) originRequestItemTableModel.getValueAt(originRequestItemRow, 1);
-                OriginRequestItem tempItem = new OriginRequestItem(hostText, pathText, null, null);
+                Integer id = (Integer) originRequestItemTableModel.getValueAt(originRequestItemRow, 0);
+                String methodText = (String) originRequestItemTableModel.getValueAt(originRequestItemRow, 1);
+                String hostText = (String) originRequestItemTableModel.getValueAt(originRequestItemRow, 2);
+                String pathText = (String) originRequestItemTableModel.getValueAt(originRequestItemRow, 3);
+                OriginRequestItem tempItem = new OriginRequestItem(id, methodText, hostText, pathText, null, null);
                 for (Map.Entry<Integer, OriginRequestItem> entry : Data.ORIGIN_REQUEST_TABLE_DATA.entrySet()) {
                     OriginRequestItem item = entry.getValue();
-                    if (item.equals(tempItem)) {
+                    if (item.equals(tempItem) && item.getId().equals(id)) {
                         clickedItem = item;
                         break;
                     }
@@ -638,6 +771,8 @@ public class MainUI {
             titledBorder = BorderFactory.createTitledBorder("添加域名 每行一个");
         } else if (type.equals("payload")) {
             titledBorder = BorderFactory.createTitledBorder("添加Payload 每行一个");
+        } else if (type.equals("header")) {
+            titledBorder = BorderFactory.createTitledBorder("添加Header 每行一个");
         }
 
         JTextArea userInputTextArea = new JTextArea();
@@ -650,6 +785,8 @@ public class MainUI {
             option = JOptionPane.showConfirmDialog(null, scrollPane, "添加域名", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         } else if (type.equals("payload")) {
             option = JOptionPane.showConfirmDialog(null, scrollPane, "添加Payload", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        } else if (type.equals("header")) {
+            option = JOptionPane.showConfirmDialog(null, scrollPane, "添加AuthHeader", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         }
 
 
@@ -662,6 +799,8 @@ public class MainUI {
                 Util.flushConfigTable(type, domainTable);
             } else if (type.equals("payload")) {
                 Util.flushConfigTable(type, payloadTable);
+            } else if (type.equals("header")) {
+                Util.flushConfigTable(type, authHeaderTable);
             }
         }
     }
@@ -673,6 +812,8 @@ public class MainUI {
             dataTextField.setText((String) domainTable.getModel().getValueAt(row, 0));
         } else if (type.equals("payload")) {
             dataTextField.setText((String) payloadTable.getModel().getValueAt(row, 0));
+        } else if (type.equals("header")) {
+            dataTextField.setText(authHeaderTable.getModel().getValueAt(row, 0) + ": " + authHeaderTable.getModel().getValueAt(row, 1));
         }
 
         int option = 0;
@@ -680,6 +821,8 @@ public class MainUI {
             option = JOptionPane.showConfirmDialog(null, dataTextField, "编辑域名", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         } else if (type.equals("payload")) {
             option = JOptionPane.showConfirmDialog(null, dataTextField, "编辑Payload", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+        } else if (type.equals("header")) {
+            option = JOptionPane.showConfirmDialog(null, dataTextField, "编辑AuthHeader", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
         }
 
 
@@ -692,6 +835,8 @@ public class MainUI {
                 Util.flushConfigTable(type, domainTable);
             } else if (type.equals("payload")) {
                 Util.flushConfigTable(type, payloadTable);
+            } else if (type.equals("header")) {
+                Util.flushConfigTable(type, authHeaderTable);
             }
         }
     }
@@ -706,14 +851,16 @@ public class MainUI {
 
         for (int i = 0; i < rowCount; i++) {
             // 由于顺序不一样 根据表中的值先创建一个originRequest
-            String host = (String) model.getValueAt(i, 0);
-            String path = (String) model.getValueAt(i, 1);
-            OriginRequestItem selectOriginRequestItem = new OriginRequestItem(host, path, null, null);
+            Integer id = (Integer) model.getValueAt(i, 0);
+            String method = (String) model.getValueAt(i, 1);
+            String host = (String) model.getValueAt(i, 2);
+            String path = (String) model.getValueAt(i, 3);
+            OriginRequestItem selectOriginRequestItem = new OriginRequestItem(id, method, host, path, null, null);
 
             // 遍历data中的数据找到对应的originRequest 检查内容
             for (Map.Entry<Integer, OriginRequestItem> originRequestItemEntry : Data.ORIGIN_REQUEST_TABLE_DATA.entrySet()) {
                 OriginRequestItem originRequestItem = originRequestItemEntry.getValue();
-                if (originRequestItem.equals(selectOriginRequestItem)) {
+                if (originRequestItem.equals(selectOriginRequestItem) && originRequestItem.getId().equals(id)) {
                     String originRequestString = originRequestItem.getOriginRequest().toString();
                     String originResponseString = originRequestItem.getOriginResponse().toString();
                     // 进行不区分大小写的比对originRequest

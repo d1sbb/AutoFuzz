@@ -8,5 +8,6 @@ public class UserConfig {
     public static Boolean LISTEN_REPETER = Boolean.FALSE;
     public static Boolean INCLUDE_SUBDOMAIN = Boolean.FALSE;
     public static Boolean PARAM_URL_ENCODE = Boolean.FALSE;
+    public static Boolean UNAUTH = Boolean.FALSE;
     public static SearchScope SEARCH_SCOPE;
 }

@@ -5,10 +5,13 @@ import com.chave.pojo.Data;
 import com.chave.pojo.OriginRequestItem;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableModel;
+import javax.swing.table.TableRowSorter;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
-import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class Util {
 
@@ -17,7 +20,11 @@ public class Util {
         JTable originRequestItemTable = Main.MainUI.getOriginRequestItemTable();
         DefaultTableModel model = (DefaultTableModel) originRequestItemTable.getModel();
 
-        model.addRow(new Object[]{item.getHost(), item.getPath(), item.getResponseLength(), item.getResponseCode()});
+        model.addRow(new Object[]{item.getId(), item.getMethod(), item.getHost(), item.getPath(), item.getResponseLength(), item.getResponseCode()});
+
+        // 始终以id排序
+        TableRowSorter<DefaultTableModel> sorter = (TableRowSorter<DefaultTableModel>) originRequestItemTable.getRowSorter();
+        sorter.sort();
     }
 
     public static String fullyURLEncode(String input) throws UnsupportedEncodingException {
@@ -32,18 +39,33 @@ public class Util {
         return encodedString.toString();
     }
 
+    public synchronized static void setOriginRequestId(OriginRequestItem item) {
+        item.setId(Data.ORIGIN_REQUEST_TABLE_DATA.size());
+    }
+
     // 刷新domain表格
     public static synchronized void flushConfigTable(String type, JTable table) {
-        ArrayList<String> targetList = null;
         if (type.equals("domain")) {
-            targetList = Data.DOMAIN_LIST;
+            ArrayList<String> targetList = Data.DOMAIN_LIST;
+            DefaultTableModel model = (DefaultTableModel) table.getModel();
+            model.setRowCount(0);
+            for (String item : targetList) {
+                model.addRow(new Object[]{item});
+            }
         } else if (type.equals("payload")) {
-            targetList = Data.PAYLOAD_LIST;
-        }
-        DefaultTableModel model = (DefaultTableModel) table.getModel();
-        model.setRowCount(0);
-        for (String item : targetList) {
-            model.addRow(new Object[]{item});
+            ArrayList<String> targetList = Data.PAYLOAD_LIST;
+            DefaultTableModel model = (DefaultTableModel) table.getModel();
+            model.setRowCount(0);
+            for (String item : targetList) {
+                model.addRow(new Object[]{item});
+            }
+        } else if (type.equals("header")) {
+            LinkedHashMap<String, String> headerList = Data.HEADER_MAP;
+            DefaultTableModel model = (DefaultTableModel) table.getModel();
+            model.setRowCount(0);
+            for (Map.Entry<String, String> entry : headerList.entrySet()) {
+                model.addRow(new Object[]{entry.getKey(), entry.getValue()});
+            }
         }
     }
 
@@ -65,18 +87,39 @@ public class Util {
             return;
         }
 
-        ArrayList targetList = null;
-        if (type.equals("domain")) {
-            targetList = Data.DOMAIN_LIST;
-        } else if (type.equals("payload")) {
-            targetList = Data.PAYLOAD_LIST;
-        }
 
-        String[] lines = userInput.split("\n");
-        for (String line : lines) {
-            line = line.trim();
-            if (!targetList.contains(line) && line != null && line.length() != 0) {
-                targetList.add(line);
+        if (type.equals("domain")) {
+            ArrayList targetList = Data.DOMAIN_LIST;
+            String[] lines = userInput.split("\n");
+            for (String line : lines) {
+                line = line.trim();
+                if (!targetList.contains(line) && line != null && line.length() != 0) {
+                    targetList.add(line);
+                }
+            }
+        } else if (type.equals("payload")) {
+            ArrayList targetList = Data.PAYLOAD_LIST;
+            String[] lines = userInput.split("\n");
+            for (String line : lines) {
+                line = line.trim();
+                if (!targetList.contains(line) && line != null && line.length() != 0) {
+                    targetList.add(line);
+                }
+            }
+        } else if (type.equals("header")) {
+            LinkedHashMap<String, String> headerMap = Data.HEADER_MAP;
+            String[] lines = userInput.split("\n");  // 获取每行请求头key-value
+            for (String line : lines) {
+                int index = line.indexOf(":"); // 找到第一个 : 的索引
+                if (index != -1) {  // 确保是合法的header的key-value
+                    String header = line.substring(0, index);  // 左边部分
+                    String value = line.substring(index + 1); // 右边部分（去掉冒号）
+                    if (!headerMap.containsKey(header) && header != null && value != null) {
+                        if (header.trim().length() != 0 && value.trim().length() != 0) {
+                            headerMap.put(header.trim(), value.trim());
+                        }
+                    }
+                }
             }
         }
     }
@@ -97,37 +140,76 @@ public class Util {
             return;
         }
 
-        ArrayList targetList = null;
+
         if (type.equals("domain")) {
-            targetList = Data.DOMAIN_LIST;
+            ArrayList targetList = Data.DOMAIN_LIST;
+            if (!targetList.contains(userInput)) {
+                targetList.set(row, userInput);
+            }
         } else if (type.equals("payload")) {
-            targetList = Data.PAYLOAD_LIST;
-        }
+            ArrayList targetList = Data.PAYLOAD_LIST;
+            if (!targetList.contains(userInput)) {
+                targetList.set(row, userInput);
+            }
+        } else if (type.equals("header")) {
+            LinkedHashMap<String, String> headerMap = Data.HEADER_MAP;
 
-        if (!targetList.contains(userInput)) {
-            targetList.set(row, userInput);
+            int index = userInput.indexOf(":");
+            if (index != -1) {  // 确保是合法的header的key-value
+                String header = userInput.substring(0, index);  // 左边部分
+                String value = userInput.substring(index + 1); // 右边部分（去掉冒号）
+                if (headerMap.containsKey(header) && header != null && value != null) {
+                    if (header.trim().length() != 0 && value.trim().length() != 0) {
+                        headerMap.put(header.trim(), value.trim());
+                    }
+                }
+            }
         }
-
     }
 
     // 用户删除配置
     public static void removeConfigData(String type, int[] rows) {
-        ArrayList targetList = null;
         if (type.equals("domain")) {
-            targetList = Data.DOMAIN_LIST;
+            ArrayList targetList = Data.DOMAIN_LIST;
+            // 如果有选中的行
+            if (rows.length > 0) {
+                // 倒序删除 避免索引影响
+                for (int i = rows.length - 1; i >= 0; i--) {
+                    int row = rows[i];
+                    // 删除选中的行
+                    targetList.remove(row);
+                }
+            }
         } else if (type.equals("payload")) {
-            targetList = Data.PAYLOAD_LIST;
-        }
-
-        // 如果有选中的行
-        if (rows.length > 0) {
-            // 倒序删除 避免索引影响
-            for (int i = rows.length - 1; i >= 0; i--) {
-                int row = rows[i];
-                // 删除选中的行
-                targetList.remove(row);
+            ArrayList targetList = Data.PAYLOAD_LIST;
+            // 如果有选中的行
+            if (rows.length > 0) {
+                // 倒序删除 避免索引影响
+                for (int i = rows.length - 1; i >= 0; i--) {
+                    int row = rows[i];
+                    // 删除选中的行
+                    targetList.remove(row);
+                }
+            }
+        } else if (type.equals("header")) {
+            LinkedHashMap<String, String> headerMap = Data.HEADER_MAP;
+            // 如果有选中的行
+            if (rows.length > 0) {
+                // 倒序删除
+                for (int i = rows.length - 1; i >= 0; i--) {
+                    int index = 0;
+                    for (Map.Entry<String, String> entry : headerMap.entrySet()) {
+                        if (index == rows[i]) {
+                            headerMap.remove(entry.getKey());
+                            break;
+                        }
+                        index++;
+                    }
+                }
             }
         }
+
+
     }
 
     // 对有歧义的字符进行url编码
@@ -143,7 +225,7 @@ public class Util {
                 encodedString.append(c);
             } else {
                 // 对所有其他字符进行URL编码
-                encodedString.append(URLEncoder.encode(String.valueOf(c), "UTF-8"));
+                encodedString.append("%").append(String.format("%02X", (int) c)); // 其他字符进行URL编码
             }
         }
 

@@ -1,6 +1,7 @@
 package com.chave.service;
 
 import burp.api.montoya.http.handler.HttpRequestToBeSent;
+import burp.api.montoya.http.message.HttpHeader;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.params.HttpParameter;
 import burp.api.montoya.http.message.params.HttpParameterType;
@@ -28,7 +29,7 @@ import java.util.*;
 public class AutoFuzzService {
 
     // 做一些准备工作  解析参数  准备待发送请求列表  初始化表格数据
-    public void preFuzz(HttpRequest request) throws UnsupportedEncodingException, MalformedURLException {
+    public synchronized void preFuzz(HttpRequest request) throws UnsupportedEncodingException, MalformedURLException {
         // 如果没有参数 直接返回
         if (!request.hasParameters()) {
             return;
@@ -43,7 +44,7 @@ public class AutoFuzzService {
 
 
         // 创建表格数据
-        OriginRequestItem originRequestItem = new OriginRequestItem(new URL(request.url()).getHost(), request.pathWithoutQuery(), null, null);
+        OriginRequestItem originRequestItem = new OriginRequestItem(Data.ORIGIN_REQUEST_TABLE_DATA.size() + 1, request.method(), new URL(request.url()).getHost(), request.pathWithoutQuery(), null, null);
         // 创建newRequestToBeSent列表
         ArrayList<HttpRequest> newRequestToBeSentList = new ArrayList<>();
         // 保存原请求数据
@@ -61,6 +62,25 @@ public class AutoFuzzService {
 
         // 处理没有json参数的情况
         if (!request.hasParameters(HttpParameterType.JSON)) {
+            // 如果设置了header 自动开始检查
+            if (Data.HEADER_MAP.size() != 0) {
+                if (UserConfig.UNAUTH) {  // 如果开启未授权检查 则去除对应header
+                    HttpRequest newRequest = request;
+                    for (Map.Entry<String, String> entry : Data.HEADER_MAP.entrySet()) {  // 去除所有设置的header
+                        newRequest = newRequest.withRemovedHeader(entry.getKey());
+                    }
+                    newRequestToBeSentList.add(newRequest);
+                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*unauth*", null, null, originRequestItem));
+                }
+
+                HttpRequest newRequest = request;
+                for (Map.Entry<String, String> entry : Data.HEADER_MAP.entrySet()) {  // 替换掉所有header
+                    newRequest = newRequest.withHeader(entry.getKey(), entry.getValue());
+                }
+                newRequestToBeSentList.add(newRequest);
+                originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*auth*", null, null, originRequestItem));
+            }
+
             // 获取所有请求参数
             List<ParsedHttpParameter> parameters = request.parameters();
             for (ParsedHttpParameter parameter : parameters) {
@@ -83,6 +103,25 @@ public class AutoFuzzService {
             }
 
         } else {  // 处理请求中有json参数的情况
+            // 如果设置了header 自动开始检查
+            if (Data.HEADER_MAP.size() != 0) {
+                if (UserConfig.UNAUTH) {  // 如果开启未授权检查 则去除对应header
+                    HttpRequest newRequest = request;
+                    for (Map.Entry<String, String> entry : Data.HEADER_MAP.entrySet()) {  // 去除所有设置的header
+                        newRequest = newRequest.withRemovedHeader(entry.getKey());
+                    }
+                    newRequestToBeSentList.add(newRequest);
+                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*unauth*", null, null, originRequestItem));
+                }
+
+                HttpRequest newRequest = request;
+                for (Map.Entry<String, String> entry : Data.HEADER_MAP.entrySet()) {  // 替换掉所有header
+                    newRequest = newRequest.withHeader(entry.getKey(), entry.getValue());
+                }
+                newRequestToBeSentList.add(newRequest);
+                originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*auth*", null, null, originRequestItem));
+            }
+
             // 先获取普通参数
             List<ParsedHttpParameter> parameters = new ArrayList<>();
             for (ParsedHttpParameter parameter : request.parameters()) {
