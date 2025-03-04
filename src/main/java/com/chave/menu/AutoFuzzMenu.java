@@ -27,7 +27,6 @@ public class AutoFuzzMenu implements ContextMenuItemsProvider {
         JMenuItem sentToAutoFuzzMenuItem = new JMenuItem("Send to AutoFuzz");
 
         HttpRequestResponse httpRequestResponse = event.messageEditorRequestResponse().get().requestResponse();
-        List<HttpRequestResponse> httpRequestResponses = event.selectedRequestResponses();
         HttpRequest request = httpRequestResponse.request();
 
         sentToAutoFuzzMenuItem.addActionListener(new ActionListener() {
