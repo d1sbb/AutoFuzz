@@ -5,19 +5,14 @@ import burp.api.montoya.ui.editor.HttpRequestEditor;
 import burp.api.montoya.ui.editor.HttpResponseEditor;
 import com.chave.Main;
 import com.chave.config.UserConfig;
-import com.chave.pojo.Data;
-import com.chave.pojo.FuzzRequestItem;
-import com.chave.pojo.OriginRequestItem;
-import com.chave.pojo.SearchScope;
+import com.chave.pojo.*;
 import com.chave.utils.Util;
-
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
-import java.util.List;
 
 @lombok.Data
 public class MainUI {
@@ -68,6 +63,7 @@ public class MainUI {
     private JCheckBox emptyParamCheckBox;
     private JCheckBox paramURLEncodeCheckBox;
     private JCheckBox unauthCheckBox;
+    private JCheckBox appendModCheckBox;
     private JLabel basicTitleLabel;
     private JLabel domainTitleLabel;
     private JLabel payloadTitleLabel;
@@ -112,6 +108,7 @@ public class MainUI {
         paramURLEncodeCheckBox = new JCheckBox("URL编码");
         includeSubDomainCheckBox = new JCheckBox("包含子域名");
         unauthCheckBox = new JCheckBox("未授权访问");
+        appendModCheckBox = new JCheckBox("追加模式");
         addDomainButton = new JButton("添加");
         editDomainButton = new JButton("编辑");
         removeDomainButton = new JButton("删除");
@@ -297,6 +294,8 @@ public class MainUI {
         payloadOperatePanel.add(Box.createVerticalStrut(10));
         payloadOperatePanel.add(removePayloadButton, Component.CENTER_ALIGNMENT);
         payloadOperatePanel.add(Box.createVerticalStrut(10));
+        payloadOperatePanel.add(appendModCheckBox, Component.CENTER_ALIGNMENT);
+        payloadOperatePanel.add(Box.createVerticalStrut(10));
         payloadOperatePanel.add(emptyParamCheckBox, Component.CENTER_ALIGNMENT);
         payloadOperatePanel.add(Box.createVerticalStrut(10));
         payloadOperatePanel.add(paramURLEncodeCheckBox, Component.CENTER_ALIGNMENT);
@@ -314,7 +313,6 @@ public class MainUI {
         // 支持多行选中
         payloadTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         // 禁止表格编辑
-//        payloadTable.getColumnModel().getColumn(0).setCellEditor(disabledEditor);
         payloadTable.setDefaultEditor(Object.class, null);
         // 创建表格滚动面板
         JScrollPane payloadTableScrollPane = new JScrollPane(payloadTable);
@@ -609,6 +607,18 @@ public class MainUI {
             public void actionPerformed(ActionEvent e) {
                 Util.removeConfigData("header", authHeaderTable.getSelectedRows());
                 Util.flushConfigTable("header", authHeaderTable);
+            }
+        });
+
+        // appendMod复选框监听器
+        appendModCheckBox.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    UserConfig.APPEND_MOD = Boolean.TRUE;
+                } else if (e.getStateChange() == ItemEvent.DESELECTED) {
+                    UserConfig.APPEND_MOD = Boolean.FALSE;
+                }
             }
         });
 
