@@ -1,7 +1,6 @@
 package com.chave.service;
 
 import burp.api.montoya.http.handler.HttpRequestToBeSent;
-import burp.api.montoya.http.message.HttpHeader;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.params.HttpParameter;
 import burp.api.montoya.http.message.params.HttpParameterType;
@@ -19,7 +18,6 @@ import com.chave.pojo.Data;
 import com.chave.pojo.FuzzRequestItem;
 import com.chave.pojo.OriginRequestItem;
 import com.chave.utils.Util;
-
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.net.MalformedURLException;
@@ -92,9 +90,17 @@ public class AutoFuzzService {
                     // 创建新请求
                     HttpRequest newRequest;
                     if (UserConfig.PARAM_URL_ENCODE) {  // 检查urlencode是否开启
-                        newRequest = request.withParameter(HttpParameter.parameter(parameter.name(), Util.urlEncode(payload), parameter.type()));
+                        if (UserConfig.APPEND_MOD && payload.length() != 0) {
+                            newRequest = request.withParameter(HttpParameter.parameter(parameter.name(), parameter.value() + Util.urlEncode(payload), parameter.type()));
+                        } else {
+                            newRequest = request.withParameter(HttpParameter.parameter(parameter.name(), Util.urlEncode(payload), parameter.type()));
+                        }
                     } else {
-                        newRequest = request.withParameter(HttpParameter.parameter(parameter.name(), payload, parameter.type()));
+                        if (UserConfig.APPEND_MOD && payload.length() != 0) {
+                            newRequest = request.withParameter(HttpParameter.parameter(parameter.name(), parameter.value() + payload, parameter.type()));
+                        } else {
+                            newRequest = request.withParameter(HttpParameter.parameter(parameter.name(), payload, parameter.type()));
+                        }
                     }
 
                     newRequestToBeSentList.add(newRequest);  // 添加待发送请求
@@ -134,9 +140,18 @@ public class AutoFuzzService {
                 for (String payload : Data.PAYLOAD_LIST) {
                     HttpRequest newRequest;
                     if (UserConfig.PARAM_URL_ENCODE) {  // 检查urlencode是否开启
-                        newRequest = request.withParameter(HttpParameter.parameter(parameter.name(), Util.urlEncode(payload), parameter.type()));
+                        if (UserConfig.APPEND_MOD && payload.length() != 0) {
+                            newRequest = request.withParameter(HttpParameter.parameter(parameter.name(), parameter.value() + Util.urlEncode(payload), parameter.type()));
+                        } else {
+                            newRequest = request.withParameter(HttpParameter.parameter(parameter.name(), Util.urlEncode(payload), parameter.type()));
+                        }
                     } else {
-                        newRequest = request.withParameter(HttpParameter.parameter(parameter.name(), payload, parameter.type()));
+                        if (UserConfig.APPEND_MOD && payload.length() != 0) {
+                            newRequest = request.withParameter(HttpParameter.parameter(parameter.name(), parameter.value() + payload, parameter.type()));
+                        } else {
+                            newRequest = request.withParameter(HttpParameter.parameter(parameter.name(), payload, parameter.type()));
+                        }
+
                     }
 
                     newRequestToBeSentList.add(newRequest);  // 添加待发送请求
@@ -272,9 +287,18 @@ public class AutoFuzzService {
                     // 如果与resultValue相同 那么就是需要修改的值
                     if (resultValue.equals(value)) {
                         if (resultValueType.equals("BigDecimal") || resultValueType.equals("Integer")) {
-                            jsonObject.put(entry.getKey(), Util.isNumber(payload));
+                            if (UserConfig.APPEND_MOD && payload.length() != 0) {
+                                jsonObject.put(entry.getKey(), Util.isNumber(entry.getValue() + payload));
+                            } else {
+                                jsonObject.put(entry.getKey(), Util.isNumber(payload));
+                            }
+
                         } else {
-                            jsonObject.put(entry.getKey(), payload);
+                            if (UserConfig.APPEND_MOD && payload.length() != 0) {
+                                jsonObject.put(entry.getKey(), entry.getValue() + payload);
+                            } else {
+                                jsonObject.put(entry.getKey(), payload);
+                            }
                         }
 
                         newJsonStringMap.put("isModified", true);
