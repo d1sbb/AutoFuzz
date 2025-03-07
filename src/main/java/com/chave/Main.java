@@ -19,7 +19,7 @@ public class Main implements BurpExtension {
 
         // banner info
         API.extension().setName("AutoFuzz");
-        LOG.logToOutput("AutoFuzz v1.0");
+        LOG.logToOutput("AutoFuzz v1.1");
         LOG.logToOutput("Author: Chave");
         LOG.logToOutput("Github: https://github.com/Chave0v0/AutoFuzz");
 
