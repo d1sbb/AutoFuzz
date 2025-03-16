@@ -52,6 +52,7 @@ public class AutoFuzzService {
             Data.ORIGIN_REQUEST_TABLE_DATA.put(requestToBeSent.messageId(), originRequestItem);
             Data.NEW_REQUEST_TO_BE_SENT_DATA.put(requestToBeSent.messageId(), newRequestToBeSentList);
         } else {  // 如果来源是插件主动扫描 则存入静态变量递减做id
+            newRequestToBeSentList.add(request);  // 这里先存入原请求等待发送
             Data.ORIGIN_REQUEST_TABLE_DATA.put(AutoFuzzMenu.ID, originRequestItem);
             Data.NEW_REQUEST_TO_BE_SENT_DATA.put(AutoFuzzMenu.ID, newRequestToBeSentList);
         }
@@ -163,16 +164,16 @@ public class AutoFuzzService {
             String json = request.body().toString();
 
             // 这里开始处理json
-            JSONObject jsonObject = null;
+            Object jsonObject = null;
             try {
-                jsonObject = JSON.parseObject(json);
+                jsonObject = JSON.parse(json);
             } catch (JSONException jsonException) {
-                jsonObject = JSON.parseObject("{}");  // 如果解析异常就替换为一个空的json串
+                jsonObject = JSON.parse("{}");  // 如果解析异常就替换为一个空的json串
                 Main.LOG.logToError("json解析异常" + jsonException.getCause());
             }
 
             // jsonObject 解析成功
-            if (jsonObject.size() != 0) {
+            if (!jsonObject.equals(JSON.parse("{}"))) {
                 LinkedHashMap<HashMap<Integer, Object>, HashMap<String, Object>> result = new LinkedHashMap<>();  // 用于存放要替换的value
                 parseJsonParam(null, jsonObject, result);  // 解析json获取所有要替换的value
 
@@ -182,8 +183,8 @@ public class AutoFuzzService {
 
                     for (Integer integer : resultEntry.getKey().keySet()) {
                         for (String payload : Data.PAYLOAD_LIST) {
-                            jsonObject = JSON.parseObject(json);
-                            String newJsonBody = updateJsonValue(integer, payload, null, jsonObject, result).get("json").toString();  // 生成新的payload
+                            jsonObject = JSON.parse(json);  // 重新赋值一个未修改过的json
+                            String newJsonBody = updateJsonValue(integer, payload, jsonObject, result).get("json").toString();  // 生成新的payload
 
                             HttpRequest newRequest = request.withBody(newJsonBody);
                             newRequestToBeSentList.add(newRequest);  // 添加到待发送请求
@@ -207,6 +208,19 @@ public class AutoFuzzService {
         ArrayList<FuzzRequestItem> fuzzRequestItemArrayList = Data.ORIGIN_REQUEST_TABLE_DATA.get(msgId).getFuzzRequestArrayList();
 
         int i = 0;
+
+        if (msgId < 0) {
+            HttpRequest originRequest = requestToBeSentList.get(0);
+            HttpRequestResponse httpRequestResponse = Main.API.http().sendRequest(originRequest);
+
+            OriginRequestItem originRequestItem = Data.ORIGIN_REQUEST_TABLE_DATA.get(msgId);
+            originRequestItem.setOriginResponse(httpRequestResponse.response());
+            originRequestItem.setResponseLength(httpRequestResponse.response().toString().length() + "");
+            originRequestItem.setResponseCode(httpRequestResponse.response().statusCode() + "");
+
+            requestToBeSentList.remove(0);
+        }
+
         for (HttpRequest request : requestToBeSentList) {
             HttpRequestResponse httpRequestResponse = Main.API.http().sendRequest(request);
             FuzzRequestItem fuzzRequestItem = fuzzRequestItemArrayList.get(i);
@@ -225,7 +239,7 @@ public class AutoFuzzService {
     }
 
     // 用于解析json中所有需要fuzz的value
-    public void parseJsonParam(Object jsonKey, Object jsonObj, LinkedHashMap result) {
+    public static void parseJsonParam(Object jsonKey, Object jsonObj, LinkedHashMap result) {
         // 递归处理不同的 JSON 类型
         if (jsonObj instanceof JSONObject) {
             JSONObject jsonObject = (JSONObject) jsonObj;
@@ -250,6 +264,10 @@ public class AutoFuzzService {
                 valueMap.put("BigDecimal", jsonObj);
             } else if (jsonObj instanceof Integer) {
                 valueMap.put("Integer", jsonObj);
+            } else if (jsonObj instanceof Boolean) {
+                valueMap.put("Boolean", jsonObj);
+            } else if (jsonObj instanceof Long) {
+                valueMap.put("Long", jsonObj);
             }
             keyMap.put(result.size() + 1, jsonKey);
 
@@ -257,7 +275,7 @@ public class AutoFuzzService {
         }
     }
 
-    public HashMap updateJsonValue(int i, String payload, Object jsonKey, Object jsonObj, LinkedHashMap<HashMap<Integer, Object>, HashMap<String, Object>> result) {
+    public static HashMap updateJsonValue(int i, String payload, Object jsonObj, LinkedHashMap<HashMap<Integer, Object>, HashMap<String, Object>> result) {
         HashMap newJsonStringMap = new HashMap();
         newJsonStringMap.put("isModified", false);
         newJsonStringMap.put("json", jsonObj);
@@ -272,11 +290,13 @@ public class AutoFuzzService {
                 if (!(value instanceof JSONObject) && !(value instanceof JSONArray)) {
                     Object resultValue = null;
                     Object resultValueType = null;
+                    Object resultKey = null;
 
                     for (Map.Entry<HashMap<Integer, Object>, HashMap<String, Object>> resultEntry : result.entrySet()) {
                         for (Map.Entry<Integer, Object> keyEntry : resultEntry.getKey().entrySet()) {
                             if (keyEntry.getKey().equals(i)) {
                                 for (Map.Entry<String, Object> valueEntry : resultEntry.getValue().entrySet()) {
+                                    resultKey = keyEntry.getValue();
                                     resultValue = valueEntry.getValue();
                                     resultValueType = valueEntry.getKey();
                                 }
@@ -284,15 +304,21 @@ public class AutoFuzzService {
                         }
                     }
 
-                    // 如果与resultValue相同 那么就是需要修改的值
-                    if (resultValue.equals(value)) {
-                        if (resultValueType.equals("BigDecimal") || resultValueType.equals("Integer")) {
+                    // 如果与resultValue相同 key相同 那么就是需要修改的值
+                    if (resultValue.equals(value) && resultKey.equals(key)) {
+                        if (resultValueType.equals("BigDecimal") || resultValueType.equals("Integer") || resultValueType.equals("Long")) {
                             if (UserConfig.APPEND_MOD && payload.length() != 0) {
                                 jsonObject.put(entry.getKey(), Util.isNumber(entry.getValue() + payload));
                             } else {
                                 jsonObject.put(entry.getKey(), Util.isNumber(payload));
                             }
 
+                        } else if (resultValueType.equals("Boolean")) {
+                            if (UserConfig.APPEND_MOD && payload.length() != 0) {
+                                jsonObject.put(entry.getKey(), Util.isBoolean(entry.getValue() + payload));
+                            } else {
+                                jsonObject.put(entry.getKey(), Util.isBoolean(payload));
+                            }
                         } else {
                             if (UserConfig.APPEND_MOD && payload.length() != 0) {
                                 jsonObject.put(entry.getKey(), entry.getValue() + payload);
@@ -307,7 +333,7 @@ public class AutoFuzzService {
                     }
                 } else {
                     // 如果依然是json嵌套 那么递归调用
-                    HashMap tmpResult = updateJsonValue(i, payload, key, value, result);
+                    HashMap tmpResult = updateJsonValue(i, payload, value, result);
                     jsonObject.put(entry.getKey(), tmpResult.get("json"));
                     if ((boolean) tmpResult.get("isModified")) {
                         newJsonStringMap.put("json", jsonObject);
@@ -336,12 +362,26 @@ public class AutoFuzzService {
                         }
                     }
 
-                    // 如果与resultValue相同 那么就是需要修改的值
-                    if (resultValue.equals(value)) {
-                        if (resultValueType.equals("BigDecimal") || resultValueType.equals("Integer")) {
-                            jsonArray.set(index, Util.isNumber(payload));
+                    // 如果与resultValue相同 那么就是需要修改的值 同时保证数组挨个替换
+                    if (resultValue.equals(value) && i == jsonArray.size() + index + 1) {
+                        if (resultValueType.equals("BigDecimal") || resultValueType.equals("Integer") || resultValueType.equals("Long")) {
+                            if (UserConfig.APPEND_MOD && payload.length() != 0) {
+                                jsonArray.set(index, Util.isNumber(value + payload));
+                            } else {
+                                jsonArray.set(index, Util.isNumber(payload));
+                            }
+                        } else if (resultValueType.equals("Boolean")) {
+                            if (UserConfig.APPEND_MOD && payload.length() != 0) {
+                                jsonArray.set(index, Util.isBoolean(value + payload));
+                            } else {
+                                jsonArray.set(index, Util.isBoolean(payload));
+                            }
                         } else {
-                            jsonArray.set(index, payload);
+                            if (UserConfig.APPEND_MOD && payload.length() != 0) {
+                                jsonArray.set(index, value + payload);
+                            } else {
+                                jsonArray.set(index, payload);
+                            }
                         }
 
                         newJsonStringMap.put("isModified", true);
@@ -350,7 +390,7 @@ public class AutoFuzzService {
                     }
                 } else {
                     // 如果依然是json嵌套 那么递归调用
-                    HashMap tmpResult = updateJsonValue(i, payload, jsonKey, value, result);
+                    HashMap tmpResult = updateJsonValue(i, payload, value, result);
                     jsonArray.set(index, tmpResult.get("json"));
                     if ((boolean) tmpResult.get("isModified")) {
                         newJsonStringMap.put("json", jsonArray);

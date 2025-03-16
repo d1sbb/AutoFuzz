@@ -2,10 +2,24 @@ package com.chave;
 
 import burp.api.montoya.BurpExtension;
 import burp.api.montoya.MontoyaApi;
+import burp.api.montoya.http.message.requests.HttpRequest;
 import burp.api.montoya.logging.Logging;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.chave.config.UserConfig;
 import com.chave.handler.AutoFuzzHandler;
 import com.chave.menu.AutoFuzzMenu;
+import com.chave.pojo.Data;
+import com.chave.pojo.FuzzRequestItem;
 import com.chave.ui.MainUI;
+import com.chave.utils.Util;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class Main implements BurpExtension {
     public static MontoyaApi API;
@@ -19,7 +33,7 @@ public class Main implements BurpExtension {
 
         // banner info
         API.extension().setName("AutoFuzz");
-        LOG.logToOutput("AutoFuzz v1.1");
+        LOG.logToOutput("AutoFuzz v1.2");
         LOG.logToOutput("Author: Chave");
         LOG.logToOutput("Github: https://github.com/Chave0v0/AutoFuzz");
 
