@@ -17,14 +17,19 @@ public class Util {
 
     // 刷新fuzz请求列表
     public static synchronized void addOriginRequestItem(OriginRequestItem item) {
-        JTable originRequestItemTable = Main.MainUI.getOriginRequestItemTable();
-        DefaultTableModel model = (DefaultTableModel) originRequestItemTable.getModel();
+        try {
+            JTable originRequestItemTable = Main.MainUI.getOriginRequestItemTable();
+            DefaultTableModel model = (DefaultTableModel) originRequestItemTable.getModel();
 
-        model.addRow(new Object[]{item.getId(), item.getMethod(), item.getHost(), item.getPath(), item.getResponseLength(), item.getResponseCode()});
+            model.addRow(new Object[]{item.getId(), item.getMethod(), item.getHost(), item.getPath(), item.getResponseLength(), item.getResponseCode()});
 
-        // 始终以id排序
-        TableRowSorter<DefaultTableModel> sorter = (TableRowSorter<DefaultTableModel>) originRequestItemTable.getRowSorter();
-        sorter.sort();
+            // 始终以id排序
+            TableRowSorter<DefaultTableModel> sorter = (TableRowSorter<DefaultTableModel>) originRequestItemTable.getRowSorter();
+            sorter.sort();
+        } catch (NullPointerException nullPointerException) {
+            // 不明原因出现空指针
+        }
+
     }
 
     public static String fullyURLEncode(String input) throws UnsupportedEncodingException {
@@ -245,6 +250,16 @@ public class Util {
                 // 如果无法转换为整数或 BigDecimal，返回原始的字符串
                 return value;
             }
+        }
+    }
+
+    public static Object isBoolean(String value) {
+        if (value.equals("true")) {
+            return true;
+        } else if (value.equals("false")) {
+            return false;
+        } else {
+            return value;
         }
     }
 }

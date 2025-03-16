@@ -2,6 +2,8 @@ package com.chave.handler;
 
 import burp.api.montoya.core.ToolType;
 import burp.api.montoya.http.handler.*;
+import burp.api.montoya.http.message.HttpRequestResponse;
+import burp.api.montoya.http.message.requests.HttpRequest;
 import com.chave.Main;
 import com.chave.config.UserConfig;
 import com.chave.menu.AutoFuzzMenu;
@@ -11,6 +13,7 @@ import com.chave.service.AutoFuzzService;
 import com.chave.utils.Util;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -77,21 +80,9 @@ public class AutoFuzzHandler implements HttpHandler {
         } else {
             originRequestItem = Data.ORIGIN_REQUEST_TABLE_DATA.get(AutoFuzzMenu.ID);
             if (originRequestItem != null) {
-                // 完成表格原请求返回包长度/状态码填写
-                originRequestItem.setResponseLength(responseReceived.toString().length() + "");
-                originRequestItem.setResponseCode(responseReceived.statusCode() + "");
-                // 保存原请求响应数据
-                originRequestItem.setOriginResponse(responseReceived);
                 AutoFuzzMenu.ID--;
 
-                // 加入线程池进行fuzz
-                executor.submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        // 在子线程中执行 autoFuzzService.startFuzz(msgId);
-                        autoFuzzService.startFuzz(AutoFuzzMenu.ID + 1);
-                    }
-                });
+                autoFuzzService.startFuzz(AutoFuzzMenu.ID + 1);
 
                 // fuzz完成后向表格中添加originRequest条目
                 Util.addOriginRequestItem(originRequestItem);
