@@ -14,9 +14,15 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
 
+import static com.chave.pojo.Data.BLACK_OR_WHITE_CHOOSE;
+
 @lombok.Data
 public class MainUI {
     // 创建组件
+
+    private JRadioButton blackButton;
+    private JRadioButton whiteButton;
+    private ButtonGroup blackOrWhiteGroup;
     private JPanel leftPanel;
     private JPanel rightPanel;
     private JPanel rightTopPanel;
@@ -81,6 +87,12 @@ public class MainUI {
 
     private void init() {
         // 初始化各个组件
+        blackButton = new JRadioButton("黑名单");
+        whiteButton = new JRadioButton("白名单");
+        blackOrWhiteGroup = new ButtonGroup();
+        blackOrWhiteGroup.add(blackButton);
+        blackOrWhiteGroup.add(whiteButton);
+        blackButton.setSelected(BLACK_OR_WHITE_CHOOSE);
         leftPanel = new JPanel();
         rightPanel = new JPanel();
         rightTopPanel = new JPanel();
@@ -122,6 +134,7 @@ public class MainUI {
         editAuthHeaderButton = new JButton("编辑");
         removeAuthHeaderButton = new JButton("删除");
         searchTextField = new JTextField();
+
         basicTitleLabel = new JLabel("-----------------------------基本功能-----------------------------");
         domainTitleLabel = new JLabel("-----------------------------域名设置-----------------------------");
         payloadTitleLabel = new JLabel("---------------------------Payload设置---------------------------");
@@ -254,6 +267,10 @@ public class MainUI {
         BoxLayout domainOperateLayout = new BoxLayout(domainOperatePanel, BoxLayout.Y_AXIS);
         domainMainPanel.setLayout(domainMainLayout);
         domainOperatePanel.setLayout(domainOperateLayout);
+        domainOperatePanel.add(blackButton, Component.CENTER_ALIGNMENT);
+        domainOperatePanel.add(Box.createVerticalStrut(10));
+        domainOperatePanel.add(whiteButton, Component.CENTER_ALIGNMENT);
+        domainOperatePanel.add(Box.createVerticalStrut(10));
         domainOperatePanel.add(addDomainButton, Component.CENTER_ALIGNMENT);
         domainOperatePanel.add(Box.createVerticalStrut(10));
         domainOperatePanel.add(editDomainButton, Component.CENTER_ALIGNMENT);
@@ -480,6 +497,17 @@ public class MainUI {
             });
         }
 
+        ActionListener listener = e -> {
+            JRadioButton selected = (JRadioButton)e.getSource();
+            if(selected == blackButton) {
+                BLACK_OR_WHITE_CHOOSE = Boolean.TRUE;
+            } else if(selected == whiteButton){
+                BLACK_OR_WHITE_CHOOSE = Boolean.FALSE;
+            }
+        };
+
+        blackButton.addActionListener(listener);
+        whiteButton.addActionListener(listener);
 
 
         // 设置启用插件复选框监听器
