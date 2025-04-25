@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 public class AutoFuzzHandler implements HttpHandler {
     private AutoFuzzService autoFuzzService = new AutoFuzzService();
-    private ThreadPoolExecutor executor = new ThreadPoolExecutor(10, 100, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(200), new ThreadPoolExecutor.AbortPolicy());
+    private static ThreadPoolExecutor executor = new ThreadPoolExecutor(10, 100, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(200), new ThreadPoolExecutor.AbortPolicy());
 
     @Override
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent requestToBeSent) {
@@ -29,21 +29,21 @@ public class AutoFuzzHandler implements HttpHandler {
         try {
             // 插件需要启用
             if (UserConfig.TURN_ON) {
-                // 先过滤域名
                 String host = new URL(requestToBeSent.url()).getHost();
-                for (String domain : Data.DOMAIN_LIST) {
-                    if (host.equals(domain)) {
-                        // 预检查
-                        if (fuzzPreCheck(requestToBeSent, host)) {
-                            autoFuzzService.preFuzz(requestToBeSent);
+                // 先过滤域名
+                if (Data.DOMAIN_LIST.size() > 0){
+                    for (String domain : Data.DOMAIN_LIST) {
+                        if(matchesDomain(host, domain, Data.BLACK_OR_WHITE_CHOOSE)){
+                            // 预检查
+                            if (fuzzPreCheck(requestToBeSent, host)) {
+                                autoFuzzService.preFuzz(requestToBeSent);
+                            }
+                            break;
                         }
-                        break;
-                    } else if (UserConfig.INCLUDE_SUBDOMAIN && host.endsWith(domain)) {
-                        // 预检查
-                        if (fuzzPreCheck(requestToBeSent, host)) {
-                            autoFuzzService.preFuzz(requestToBeSent);
-                        }
-                        break;
+                    }
+                }else if(Data.BLACK_OR_WHITE_CHOOSE){
+                    if (fuzzPreCheck(requestToBeSent, host)) {
+                        autoFuzzService.preFuzz(requestToBeSent);
                     }
                 }
             }
@@ -53,6 +53,15 @@ public class AutoFuzzHandler implements HttpHandler {
 
 
         return null;
+    }
+
+    private boolean matchesDomain(String host, String domain, boolean isBlackOrWhite) {
+        boolean isExactMatch = host.equals(domain);
+        boolean isSubdomain = UserConfig.INCLUDE_SUBDOMAIN && host.endsWith(domain);
+
+        return isBlackOrWhite
+                ? (!isExactMatch && !isSubdomain) // 白名单模式：允许精确匹配或子域名
+                : (isExactMatch || isSubdomain); // 黑名单模式：不允许域名或者子域名匹配到
     }
 
     @Override

@@ -7,11 +7,13 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 
 public class Util {
 
@@ -50,85 +52,101 @@ public class Util {
 
     // 刷新domain表格
     public static synchronized void flushConfigTable(String type, JTable table) {
-        if (type.equals("domain")) {
-            ArrayList<String> targetList = Data.DOMAIN_LIST;
-            DefaultTableModel model = (DefaultTableModel) table.getModel();
-            model.setRowCount(0);
-            for (String item : targetList) {
+        DefaultTableModel model = (DefaultTableModel) table.getModel();
+        model.setRowCount(0);  // 清空表格
+
+        switch (type) {
+            case "domain":
+                fillTableWithList(model, Data.DOMAIN_LIST, false);
+                break;
+            case "payload":
+                fillTableWithList(model, Data.PAYLOAD_LIST, true);
+                break;
+            case "header":
+                fillTableWithMap(model, Data.HEADER_MAP);
+                break;
+        }
+    }
+
+    private static void fillTableWithList(DefaultTableModel model, ArrayList<String> list, Boolean isPayload) {
+        ArrayList<String> tempList = new ArrayList<>();
+        if (list.size() > 0) {
+            for (String item : list) {
+                if (!item.equals("")) {
+                    tempList.add(item);
+                }
                 model.addRow(new Object[]{item});
             }
-        } else if (type.equals("payload")) {
-            ArrayList<String> targetList = Data.PAYLOAD_LIST;
-            DefaultTableModel model = (DefaultTableModel) table.getModel();
-            model.setRowCount(0);
-            for (String item : targetList) {
-                model.addRow(new Object[]{item});
+            if (isPayload) {
+                updatePayload(tempList);
             }
-        } else if (type.equals("header")) {
-            LinkedHashMap<String, String> headerList = Data.HEADER_MAP;
-            DefaultTableModel model = (DefaultTableModel) table.getModel();
-            model.setRowCount(0);
-            for (Map.Entry<String, String> entry : headerList.entrySet()) {
-                model.addRow(new Object[]{entry.getKey(), entry.getValue()});
-            }
+        }
+    }
+
+    private static void fillTableWithMap(DefaultTableModel model, LinkedHashMap<String, String> map) {
+        for (Map.Entry<String, String> entry : map.entrySet()) {
+            model.addRow(new Object[]{entry.getKey(), entry.getValue()});
         }
     }
 
 
     // 用户添加配置
     public static void addConfigData(String type, JTextArea userInputTextArea) {
-
         String userInput = userInputTextArea.getText();
-        // 防止空指针
-        if (userInput == null) {
+        if (isBlankInput(userInput)) {
             return;
         }
 
-        // 去除前后空格换行符
-        userInput = userInput.trim();
-
-        // 防止只有空白字符
-        if (userInput.length() == 0) {
-            return;
+        switch (type) {
+            case "domain":
+                addToDomainList(userInput);
+                break;
+            case "payload":
+                addToPayloadList(userInput);
+                break;
+            case "header":
+                addToHeaderMap(userInput);
+                break;
         }
+    }
 
+    private static boolean isBlankInput(String input) {
+        return input == null || input.trim().length() == 0;
+    }
 
-        if (type.equals("domain")) {
-            ArrayList targetList = Data.DOMAIN_LIST;
-            String[] lines = userInput.split("\n");
-            for (String line : lines) {
-                line = line.trim();
-                if (!targetList.contains(line) && line != null && line.length() != 0) {
-                    targetList.add(line);
-                }
-            }
-        } else if (type.equals("payload")) {
-            ArrayList targetList = Data.PAYLOAD_LIST;
-            String[] lines = userInput.split("\n");
-            for (String line : lines) {
-                line = line.trim();
-                if (!targetList.contains(line) && line != null && line.length() != 0) {
-                    targetList.add(line);
-                }
-            }
-        } else if (type.equals("header")) {
-            LinkedHashMap<String, String> headerMap = Data.HEADER_MAP;
-            String[] lines = userInput.split("\n");  // 获取每行请求头key-value
-            for (String line : lines) {
-                int index = line.indexOf(":"); // 找到第一个 : 的索引
-                if (index != -1) {  // 确保是合法的header的key-value
-                    String header = line.substring(0, index);  // 左边部分
-                    String value = line.substring(index + 1); // 右边部分（去掉冒号）
-                    if (!headerMap.containsKey(header) && header != null && value != null) {
-                        if (header.trim().length() != 0 && value.trim().length() != 0) {
-                            headerMap.put(header.trim(), value.trim());
-                        }
-                    }
-                }
+    private static void addToDomainList(String input) {
+        processListInput(Data.DOMAIN_LIST, input);
+    }
+
+    private static void addToPayloadList(String input) {
+        processListInput(Data.PAYLOAD_LIST, input);
+    }
+
+    private static void processListInput(ArrayList<String> targetList, String input) {
+        String[] lines = input.split("\n");
+        for (String line : lines) {
+            line = line.trim();
+            if (!line.isEmpty() && !targetList.contains(line)) {
+                targetList.add(line);
             }
         }
     }
 
+    private static void addToHeaderMap(String input) {
+        LinkedHashMap<String, String> headerMap = Data.HEADER_MAP;
+        String[] lines = input.split("\n");
+
+        for (String line : lines) {
+            String[] parts = line.split(":", 2);  // 最多分割成两部分
+            if (parts.length == 2) {
+                String header = parts[0].trim();
+                String value = parts[1].trim();
+                if (!header.isEmpty() && !value.isEmpty() && !headerMap.containsKey(header)) {
+                    headerMap.put(header, value);
+                }
+            }
+        }
+    }
     // 用户编辑配置
     public static void editConfigData(String type, JTextField userInputTextField, int row) {
         String userInput = userInputTextField.getText();
@@ -174,47 +192,40 @@ public class Util {
 
     // 用户删除配置
     public static void removeConfigData(String type, int[] rows) {
-        if (type.equals("domain")) {
-            ArrayList targetList = Data.DOMAIN_LIST;
-            // 如果有选中的行
-            if (rows.length > 0) {
-                // 倒序删除 避免索引影响
-                for (int i = rows.length - 1; i >= 0; i--) {
-                    int row = rows[i];
-                    // 删除选中的行
-                    targetList.remove(row);
-                }
-            }
-        } else if (type.equals("payload")) {
-            ArrayList targetList = Data.PAYLOAD_LIST;
-            // 如果有选中的行
-            if (rows.length > 0) {
-                // 倒序删除 避免索引影响
-                for (int i = rows.length - 1; i >= 0; i--) {
-                    int row = rows[i];
-                    // 删除选中的行
-                    targetList.remove(row);
-                }
-            }
-        } else if (type.equals("header")) {
-            LinkedHashMap<String, String> headerMap = Data.HEADER_MAP;
-            // 如果有选中的行
-            if (rows.length > 0) {
-                // 倒序删除
-                for (int i = rows.length - 1; i >= 0; i--) {
-                    int index = 0;
-                    for (Map.Entry<String, String> entry : headerMap.entrySet()) {
-                        if (index == rows[i]) {
-                            headerMap.remove(entry.getKey());
-                            break;
-                        }
-                        index++;
-                    }
-                }
-            }
+        if (rows.length == 0) {
+            return;
         }
 
+        switch (type) {
+            case "domain":
+                removeFromList(Data.DOMAIN_LIST, rows);
+                break;
+            case "payload":
+                removeFromList(Data.PAYLOAD_LIST, rows);
+                break;
+            case "header":
+                removeFromMap(Data.HEADER_MAP, rows);
+                break;
+        }
+    }
 
+    private static void removeFromList(ArrayList<String> list, int[] rows) {
+        for (int i = rows.length - 1; i >= 0; i--) {
+            list.remove(rows[i]);
+        }
+    }
+
+    private static void removeFromMap(LinkedHashMap<String, String> map, int[] rows) {
+        for (int i = rows.length - 1; i >= 0; i--) {
+            int index = 0;
+            for (Map.Entry<String, String> entry : map.entrySet()) {
+                if (index == rows[i]) {
+                    map.remove(entry.getKey());
+                    break;
+                }
+                index++;
+            }
+        }
     }
 
     // 对有歧义的字符进行url编码
@@ -262,4 +273,63 @@ public class Util {
             return value;
         }
     }
+
+    // 安装插件初始化Payload缓存
+    private static final String FILE_NAME = "autofuzz_payload.txt";
+    private static final String DIR_NAME = ".autofuzz";
+
+    private static Path getDirPath() {
+        return Paths.get(System.getProperty("user.home"), DIR_NAME);
+    }
+
+    private static Path getFilePath() {
+        return getDirPath().resolve(FILE_NAME);
+    }
+
+    public static List<String> handleAutoFuzzPayload() {
+        Path dirPath = getDirPath();
+        Path filePath = getFilePath();
+
+        try {
+            // 检查目录是否存在，不存在则创建
+            if (!Files.exists(dirPath)) {
+                Files.createDirectories(dirPath);
+                System.out.println("Directory created: " + dirPath);
+            }
+
+            // 检查文件是否存在
+            if (Files.exists(filePath)) {
+                // 文件存在，读取内容
+                return Files.readAllLines(filePath);
+            } else {
+                // 文件不存在，创建新文件
+                Files.createFile(filePath);
+                System.out.println("File created: " + filePath);
+                return Collections.emptyList();
+            }
+        } catch (IOException e) {
+            System.err.println("Error handling file: " + e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    private static void writeAll(List<String> data)  {
+
+        try {
+            Files.write(getFilePath(), data);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void clear() {
+        writeAll(new ArrayList<>());
+    }
+
+    public static void updatePayload(List<String> data){
+        clear();
+        writeAll(data);
+    }
 }
+
+
