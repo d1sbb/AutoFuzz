@@ -189,7 +189,7 @@ public class MainUI {
 
 
         // 创建右边表格
-        String[] fuzzRequestItemTableColumnName = {"Param", "Payload", "返回包变化", "状态码"};
+        String[] fuzzRequestItemTableColumnName = {"Param", "Payload", "返回包长度", "返回包变化", "状态码"};
         DefaultTableModel fuzzRequestItemTableModel = new DefaultTableModel(fuzzRequestItemTableColumnName, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -462,7 +462,7 @@ public class MainUI {
                     try {
                         int originRequestSelectedRow = originRequestItemTable.getSelectedRows()[0];
 
-                        if (column == 0 || column == 1 || column == 2 || column == 3) {
+                        if (column == 0 || column == 1 || column == 2 || column == 3 || column == 4) {
                             ((DefaultTableCellRenderer) c).setHorizontalAlignment(SwingConstants.CENTER);
                         }
 
@@ -768,7 +768,7 @@ public class MainUI {
                 ArrayList<FuzzRequestItem> fuzzRequestItemArrayList = clickedItem.getFuzzRequestArrayList();
                 fuzzRequestItemTableModel.setRowCount(0);
                 for (FuzzRequestItem fuzzRequestItem : fuzzRequestItemArrayList) {
-                    fuzzRequestItemTableModel.addRow(new Object[]{fuzzRequestItem.getParam(), fuzzRequestItem.getPayload(), fuzzRequestItem.getResponseLengthChange(), fuzzRequestItem.getResponseCode()});
+                    fuzzRequestItemTableModel.addRow(new Object[]{fuzzRequestItem.getParam(), fuzzRequestItem.getPayload(), fuzzRequestItem.getResponseLength(), fuzzRequestItem.getResponseLengthChange(), fuzzRequestItem.getResponseCode()});
                 }
                 fuzzRequestItemTable.updateUI();
             }

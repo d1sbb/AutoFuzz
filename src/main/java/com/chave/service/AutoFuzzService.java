@@ -69,7 +69,7 @@ public class AutoFuzzService {
                         newRequest = newRequest.withRemovedHeader(entry.getKey());
                     }
                     newRequestToBeSentList.add(newRequest);
-                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*unauth*", null, null, originRequestItem));
+                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*unauth*", null, null, null, originRequestItem));
                 }
 
                 HttpRequest newRequest = request;
@@ -77,7 +77,7 @@ public class AutoFuzzService {
                     newRequest = newRequest.withHeader(entry.getKey(), entry.getValue());
                 }
                 newRequestToBeSentList.add(newRequest);
-                originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*auth*", null, null, originRequestItem));
+                originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*auth*", null, null, null, originRequestItem));
             }
 
             // 获取所有请求参数
@@ -105,7 +105,7 @@ public class AutoFuzzService {
                     }
 
                     newRequestToBeSentList.add(newRequest);  // 添加待发送请求
-                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem(parameter.name(), payload, null, null, originRequestItem));  // 添加表格数据
+                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem(parameter.name(), payload, null, null, null, originRequestItem));  // 添加表格数据
                 }
             }
 
@@ -118,7 +118,7 @@ public class AutoFuzzService {
                         newRequest = newRequest.withRemovedHeader(entry.getKey());
                     }
                     newRequestToBeSentList.add(newRequest);
-                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*unauth*", null, null, originRequestItem));
+                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*unauth*", null, null, null, originRequestItem));
                 }
 
                 HttpRequest newRequest = request;
@@ -126,7 +126,7 @@ public class AutoFuzzService {
                     newRequest = newRequest.withHeader(entry.getKey(), entry.getValue());
                 }
                 newRequestToBeSentList.add(newRequest);
-                originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*auth*", null, null, originRequestItem));
+                originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*auth*", null, null, null, originRequestItem));
             }
 
             // 先获取普通参数
@@ -156,7 +156,7 @@ public class AutoFuzzService {
                     }
 
                     newRequestToBeSentList.add(newRequest);  // 添加待发送请求
-                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem(parameter.name(), payload, null, null, originRequestItem));  // 添加表格数据
+                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem(parameter.name(), payload, null, null, null, originRequestItem));  // 添加表格数据
                 }
             }
 
@@ -188,7 +188,7 @@ public class AutoFuzzService {
 
                             HttpRequest newRequest = request.withBody(newJsonBody);
                             newRequestToBeSentList.add(newRequest);  // 添加到待发送请求
-                            originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem((String) resultKey.get(integer), payload, null, null, originRequestItem));  // 添加表格数据
+                            originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem((String) resultKey.get(integer), payload, null, null, null, originRequestItem));  // 添加表格数据
                         }
                     }
 
@@ -226,8 +226,10 @@ public class AutoFuzzService {
             FuzzRequestItem fuzzRequestItem = fuzzRequestItemArrayList.get(i);
             fuzzRequestItem.setFuzzRequestResponse(httpRequestResponse);  // 与table数据关联
 
-            // 获取返回包长度变化
+            // 获取返回包长度信息
+            String responseLength = httpRequestResponse.response().toString().length() + "";
             int lengthChange = httpRequestResponse.response().toString().length() - Integer.parseInt(fuzzRequestItem.getOriginRequestItem().getResponseLength());
+            fuzzRequestItem.setResponseLength(responseLength);
             fuzzRequestItem.setResponseLengthChange((lengthChange > 0 ? "+" + lengthChange : String.valueOf(lengthChange)));
             fuzzRequestItem.setResponseCode(httpRequestResponse.response().statusCode() + "");
 
