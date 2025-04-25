@@ -12,11 +12,20 @@ import javax.swing.border.TitledBorder;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.IOException;
 import java.util.*;
+import java.util.List;
+
+import static com.chave.pojo.Data.*;
 
 @lombok.Data
 public class MainUI {
     // 创建组件
+
+    private JRadioButton blackButton;
+    private JRadioButton whiteButton;
+    private ButtonGroup blackOrWhiteGroup;
+
     private JPanel leftPanel;
     private JPanel rightPanel;
     private JPanel rightTopPanel;
@@ -81,6 +90,13 @@ public class MainUI {
 
     private void init() {
         // 初始化各个组件
+        blackButton = new JRadioButton("黑名单");
+        whiteButton = new JRadioButton("白名单");
+        blackOrWhiteGroup = new ButtonGroup();
+        blackOrWhiteGroup.add(blackButton);
+        blackOrWhiteGroup.add(whiteButton);
+        blackButton.setSelected(BLACK_OR_WHITE_CHOOSE);
+
         leftPanel = new JPanel();
         rightPanel = new JPanel();
         rightTopPanel = new JPanel();
@@ -122,6 +138,7 @@ public class MainUI {
         editAuthHeaderButton = new JButton("编辑");
         removeAuthHeaderButton = new JButton("删除");
         searchTextField = new JTextField();
+
         basicTitleLabel = new JLabel("-----------------------------基本功能-----------------------------");
         domainTitleLabel = new JLabel("-----------------------------域名设置-----------------------------");
         payloadTitleLabel = new JLabel("---------------------------Payload设置---------------------------");
@@ -254,12 +271,16 @@ public class MainUI {
         BoxLayout domainOperateLayout = new BoxLayout(domainOperatePanel, BoxLayout.Y_AXIS);
         domainMainPanel.setLayout(domainMainLayout);
         domainOperatePanel.setLayout(domainOperateLayout);
+        domainOperatePanel.add(blackButton, Component.CENTER_ALIGNMENT);
+        domainOperatePanel.add(Box.createVerticalStrut(5));
+        domainOperatePanel.add(whiteButton, Component.CENTER_ALIGNMENT);
+        domainOperatePanel.add(Box.createVerticalStrut(5));
         domainOperatePanel.add(addDomainButton, Component.CENTER_ALIGNMENT);
-        domainOperatePanel.add(Box.createVerticalStrut(10));
+        domainOperatePanel.add(Box.createVerticalStrut(5));
         domainOperatePanel.add(editDomainButton, Component.CENTER_ALIGNMENT);
-        domainOperatePanel.add(Box.createVerticalStrut(10));
+        domainOperatePanel.add(Box.createVerticalStrut(5));
         domainOperatePanel.add(removeDomainButton, Component.CENTER_ALIGNMENT);
-        domainOperatePanel.add(Box.createVerticalStrut(10));
+        domainOperatePanel.add(Box.createVerticalStrut(5));
         domainOperatePanel.add(includeSubDomainCheckBox, Component.CENTER_ALIGNMENT);
         domainMainPanel.add(Box.createHorizontalStrut(5));
         domainMainPanel.add(domainOperatePanel);
@@ -288,6 +309,7 @@ public class MainUI {
         BoxLayout payloadOperateLayout = new BoxLayout(payloadOperatePanel, BoxLayout.Y_AXIS);
         payloadMainPanel.setLayout(payloadMainLayout);
         payloadOperatePanel.setLayout(payloadOperateLayout);
+
         payloadOperatePanel.add(addPayloadButton, Component.CENTER_ALIGNMENT);
         payloadOperatePanel.add(Box.createVerticalStrut(10));
         payloadOperatePanel.add(editPayloadButton, Component.CENTER_ALIGNMENT);
@@ -310,6 +332,7 @@ public class MainUI {
             }
         };
         payloadTable = new JTable(payloadModel);
+        getPayloadCache();
         // 支持多行选中
         payloadTable.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         // 禁止表格编辑
@@ -361,7 +384,7 @@ public class MainUI {
 
 
         // 左侧面板添加各个组件
-        leftPanel.add(Box.createVerticalStrut(10));
+        leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(basicTitlePanel);
         leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(turnOnPanel);
@@ -371,19 +394,19 @@ public class MainUI {
         leftPanel.add(listenRepeterPanel);
         leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(cleanRequestListPanel);
-        leftPanel.add(Box.createVerticalStrut(15));
+        leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(domainTitlePanel);
         leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(domainMainPanel);
-        leftPanel.add(Box.createVerticalStrut(15));
+        leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(payloadTitlePanel);
         leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(payloadMainPanel);
-        leftPanel.add(Box.createVerticalStrut(15));
+        leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(authHeaderTitlePanel);
         leftPanel.add(Box.createVerticalStrut(5));
         leftPanel.add(authHeaderMainPanel);
-        leftPanel.add(Box.createVerticalStrut(10));
+        leftPanel.add(Box.createVerticalStrut(5));
 
         BoxLayout tableLayout = new BoxLayout(tablePanel, BoxLayout.X_AXIS);
         tablePanel.setLayout(tableLayout);
@@ -480,6 +503,17 @@ public class MainUI {
             });
         }
 
+        ActionListener listener = e -> {
+            JRadioButton selected = (JRadioButton)e.getSource();
+            if(selected == blackButton) {
+                BLACK_OR_WHITE_CHOOSE = Boolean.TRUE;
+            } else if(selected == whiteButton){
+                BLACK_OR_WHITE_CHOOSE = Boolean.FALSE;
+            }
+        };
+
+        blackButton.addActionListener(listener);
+        whiteButton.addActionListener(listener);
 
 
         // 设置启用插件复选框监听器
@@ -627,12 +661,13 @@ public class MainUI {
             @Override
             public void itemStateChanged(ItemEvent e) {
                 if (e.getStateChange() == ItemEvent.SELECTED) {
-                    Data.PAYLOAD_LIST.add(0, "");
+                    PAYLOAD_LIST.add(0, "");
                 } else if (e.getStateChange() == ItemEvent.DESELECTED) {
-                    Data.PAYLOAD_LIST.remove("");
+                    PAYLOAD_LIST.remove("");
                 }
 
                 Util.flushConfigTable("payload", payloadTable);
+
             }
         });
 
@@ -915,5 +950,14 @@ public class MainUI {
         }
     }
 
+    // 初始化Payload缓存
+    private void getPayloadCache(){
+        List<String> content = null;
+        content = Util.handleAutoFuzzPayload();
+        if (!content.isEmpty()) {
+           PAYLOAD_LIST.addAll(content);
+            Util.flushConfigTable("payload", payloadTable);
+        }
+    }
 
 }
