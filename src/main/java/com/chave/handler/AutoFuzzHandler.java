@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 public class AutoFuzzHandler implements HttpHandler {
     private AutoFuzzService autoFuzzService = new AutoFuzzService();
-    private ThreadPoolExecutor executor = new ThreadPoolExecutor(10, 100, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(200), new ThreadPoolExecutor.AbortPolicy());
+    private static ThreadPoolExecutor executor = new ThreadPoolExecutor(10, 100, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(200), new ThreadPoolExecutor.AbortPolicy());
 
     @Override
     public RequestToBeSentAction handleHttpRequestToBeSent(HttpRequestToBeSent requestToBeSent) {

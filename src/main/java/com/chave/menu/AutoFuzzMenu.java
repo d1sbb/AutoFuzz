@@ -35,14 +35,14 @@ public class AutoFuzzMenu implements ContextMenuItemsProvider {
                 try {
                     autoFuzzService.preFuzz(request);
 
-//                    ExecutorService executorService = Executors.newSingleThreadExecutor();
-//                    executorService.submit(new Runnable() {
-//                        @Override
-//                        public void run() {
+                    ExecutorService executorService = Executors.newSingleThreadExecutor();
+                    executorService.submit(new Runnable() {
+                        @Override
+                        public void run() {
                             Main.API.http().sendRequest(request);  // 发送一个请求用于触发response handler
-//                        }
-//                    });
-//                    executorService.shutdownNow();
+                        }
+                    });
+                    executorService.shutdownNow();
 
                 } catch (Exception exception) {
                     Main.LOG.logToError("右键主动fuzz出现异常" + exception.getCause());

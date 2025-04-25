@@ -70,14 +70,16 @@ public class Util {
 
     private static void fillTableWithList(DefaultTableModel model, ArrayList<String> list, Boolean isPayload) {
         ArrayList<String> tempList = new ArrayList<>();
-        for (String item : list) {
-            if (!item.equals("")){
-                tempList.add(item);
+        if (list.size() > 0) {
+            for (String item : list) {
+                if (!item.equals("")) {
+                    tempList.add(item);
+                }
+                model.addRow(new Object[]{item});
             }
-            model.addRow(new Object[]{item});
-        }
-        if (isPayload){
-            updatePayload(tempList);
+            if (isPayload) {
+                updatePayload(tempList);
+            }
         }
     }
 

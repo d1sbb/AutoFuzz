@@ -5,6 +5,7 @@ import burp.api.montoya.ui.editor.HttpRequestEditor;
 import burp.api.montoya.ui.editor.HttpResponseEditor;
 import com.chave.Main;
 import com.chave.config.UserConfig;
+import com.chave.handler.AutoFuzzHandler;
 import com.chave.pojo.*;
 import com.chave.utils.Util;
 import javax.swing.*;
@@ -12,9 +13,12 @@ import javax.swing.border.TitledBorder;
 import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import static com.chave.pojo.Data.*;
 
@@ -55,7 +59,7 @@ public class MainUI {
     private JTable authHeaderTable;
     private JButton addDomainButton;
     private JButton removeDomainButton;
-    private JButton cleanFuzzRequestItemButton;
+    private JButton cleanRequestItemButton;
     private JButton editDomainButton;
     private JButton addPayloadButton;
     private JButton editPayloadButton;
@@ -128,7 +132,7 @@ public class MainUI {
         addDomainButton = new JButton("添加");
         editDomainButton = new JButton("编辑");
         removeDomainButton = new JButton("删除");
-        cleanFuzzRequestItemButton = new JButton("清空请求记录");
+        cleanRequestItemButton = new JButton("清空请求记录");
         addPayloadButton = new JButton("添加");
         editPayloadButton = new JButton("编辑");
         removePayloadButton = new JButton("删除");
@@ -262,7 +266,7 @@ public class MainUI {
         BoxLayout cleanRequestListLayout = new BoxLayout(cleanRequestListPanel, BoxLayout.X_AXIS);
         cleanRequestListPanel.setLayout(cleanRequestListLayout);
         cleanRequestListPanel.add(Box.createHorizontalStrut(100));
-        cleanRequestListPanel.add(cleanFuzzRequestItemButton);
+        cleanRequestListPanel.add(cleanRequestItemButton);
         cleanRequestListPanel.add(Box.createHorizontalGlue());
         cleanRequestListPanel.setMaximumSize(new Dimension(20000, 22));
         // 域名配置部分绘制
@@ -556,12 +560,23 @@ public class MainUI {
 
 
         // 清空请求记录按钮监听器
-        cleanFuzzRequestItemButton.addActionListener(new ActionListener() {
+        cleanRequestItemButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 Data.ORIGIN_REQUEST_TABLE_DATA.clear();
+                Data.NEW_REQUEST_TO_BE_SENT_DATA.clear();
                 originRequestItemTableModel.setRowCount(0);
                 fuzzRequestItemTableModel.setRowCount(0);
+
+                try {
+                    Field executorField = AutoFuzzHandler.class.getDeclaredField("executor");
+                    executorField.setAccessible(true);
+                    executorField.set(null, new ThreadPoolExecutor(10, 100, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>(200), new ThreadPoolExecutor.AbortPolicy()));
+                } catch (NoSuchFieldException ex) {
+                    Main.LOG.logToError(ex.getMessage() + "重置线程池异常");
+                } catch (IllegalAccessException ex) {
+                    Main.LOG.logToError(ex.getMessage() + "重置线程池异常");
+                }
             }
         });
 
