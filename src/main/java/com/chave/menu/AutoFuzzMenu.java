@@ -24,6 +24,7 @@ public class AutoFuzzMenu implements ContextMenuItemsProvider {
 
         // 定义菜单
         ArrayList<Component> menus = new ArrayList<>();
+        //@d1sbb修改，修复get()可能为空时异常
         event.messageEditorRequestResponse().ifPresent(editorReqResp -> {
             HttpRequest request = editorReqResp.requestResponse().request();
 
