@@ -28,8 +28,8 @@ public class AutoFuzzService {
 
     // 做一些准备工作  解析参数  准备待发送请求列表  初始化表格数据
     public synchronized void preFuzz(HttpRequest request) throws UnsupportedEncodingException, MalformedURLException {
-        // 如果没有参数 直接返回
-        if (!request.hasParameters()) {
+        // 如果没有参数 直接返回 //@d1sbb修改，如果Auth Header没有设置，则不进行fuzz
+        if (!request.hasParameters() && Data.HEADER_MAP.isEmpty()) {
             return;
         }
 
