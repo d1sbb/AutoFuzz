@@ -2,6 +2,7 @@ package com.chave.service;
 
 import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.handler.HttpRequestToBeSent;
+import burp.api.montoya.http.handler.TimingData;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.params.HttpParameter;
 import burp.api.montoya.http.message.params.HttpParameterType;
@@ -71,7 +72,7 @@ public class AutoFuzzService {
                         newRequest = newRequest.withRemovedHeader(entry.getKey());
                     }
                     newRequestToBeSentList.add(newRequest);
-                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*unauth*", null, null, null, originRequestItem));
+                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*unauth*", null, null, null, null, originRequestItem));
                 }
 
                 HttpRequest newRequest = request;
@@ -79,7 +80,7 @@ public class AutoFuzzService {
                     newRequest = newRequest.withHeader(entry.getKey(), entry.getValue());
                 }
                 newRequestToBeSentList.add(newRequest);
-                originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*auth*", null, null, null, originRequestItem));
+                originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*auth*", null, null, null, null, originRequestItem));
             }
 
             // 获取所有请求参数
@@ -107,7 +108,7 @@ public class AutoFuzzService {
                     }
 
                     newRequestToBeSentList.add(newRequest);  // 添加待发送请求
-                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem(parameter.name(), payload, null, null, null, originRequestItem));  // 添加表格数据
+                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem(parameter.name(), payload, null, null, null, null, originRequestItem));  // 添加表格数据
                 }
             }
 
@@ -120,7 +121,7 @@ public class AutoFuzzService {
                         newRequest = newRequest.withRemovedHeader(entry.getKey());
                     }
                     newRequestToBeSentList.add(newRequest);
-                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*unauth*", null, null, null, originRequestItem));
+                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*unauth*", null, null, null, null, originRequestItem));
                 }
 
                 HttpRequest newRequest = request;
@@ -128,7 +129,7 @@ public class AutoFuzzService {
                     newRequest = newRequest.withHeader(entry.getKey(), entry.getValue());
                 }
                 newRequestToBeSentList.add(newRequest);
-                originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*auth*", null, null, null, originRequestItem));
+                originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*auth*", null, null, null, null, originRequestItem));
             }
 
             // 先获取普通参数
@@ -158,7 +159,7 @@ public class AutoFuzzService {
                     }
 
                     newRequestToBeSentList.add(newRequest);  // 添加待发送请求
-                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem(parameter.name(), payload, null, null, null, originRequestItem));  // 添加表格数据
+                    originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem(parameter.name(), payload, null, null, null, null, originRequestItem));  // 添加表格数据
                 }
             }
 
@@ -192,7 +193,7 @@ public class AutoFuzzService {
                             ByteArray utf8Body = ByteArray.byteArray(newJsonBody.getBytes(StandardCharsets.UTF_8));
                             HttpRequest newRequest = request.withBody(utf8Body);
                             newRequestToBeSentList.add(newRequest);  // 添加到待发送请求
-                            originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem((String) resultKey.get(integer), payload, null, null, null, originRequestItem));  // 添加表格数据
+                            originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem((String) resultKey.get(integer), payload, null, null, null, null, originRequestItem));  // 添加表格数据
                         }
                     }
 
@@ -236,7 +237,19 @@ public class AutoFuzzService {
             fuzzRequestItem.setResponseLength(responseLength);
             fuzzRequestItem.setResponseLengthChange((lengthChange > 0 ? "+" + lengthChange : String.valueOf(lengthChange)));
             fuzzRequestItem.setResponseCode(httpRequestResponse.response().statusCode() + "");
-
+            // 获取返回包时间信息
+            Optional<TimingData> timingOpt = httpRequestResponse.timingData();
+            if (timingOpt.isPresent()) {
+                double timeInSeconds = timingOpt.get().timeBetweenRequestSentAndEndOfResponse().toMillis() / 1000.0;
+                // 如果时间大于2秒 则标记X
+                if (timeInSeconds > 2.0) {
+                    fuzzRequestItem.setResponseTime(String.format("%.3f ↑", timeInSeconds));
+                }else {
+                    fuzzRequestItem.setResponseTime(String.format("%.3f", timeInSeconds));
+                }
+            } else {
+                Main.LOG.logToError("未获取到 timingData");
+            }
             i++;
         }
 

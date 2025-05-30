@@ -276,7 +276,7 @@ public class MainUI {
 
 
         // 创建右边表格
-        String[] fuzzRequestItemTableColumnName = {"Param", "Payload", "Length", "Change", "Status"};
+        String[] fuzzRequestItemTableColumnName = {"Param", "Payload", "Length", "Change", "Status", "Time(s)"};
         DefaultTableModel fuzzRequestItemTableModel = new DefaultTableModel(fuzzRequestItemTableColumnName, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -583,7 +583,7 @@ public class MainUI {
                     try {
                         int originRequestSelectedRow = originRequestItemTable.getSelectedRows()[0];
 
-                        if (column == 0 || column == 1 || column == 2 || column == 3 || column == 4) {
+                        if (column == 0 || column == 1 || column == 2 || column == 3 || column == 4 || column == 5) {
                             ((DefaultTableCellRenderer) c).setHorizontalAlignment(SwingConstants.CENTER);
                         }
 
@@ -955,7 +955,7 @@ public class MainUI {
                             fuzzRequestItemTableModel.addRow(new Object[]{
                                     fuzzItem.getParam(), fuzzItem.getPayload(),
                                     fuzzItem.getResponseLength(), fuzzItem.getResponseLengthChange(),
-                                    fuzzItem.getResponseCode()
+                                    fuzzItem.getResponseCode(), fuzzItem.getResponseTime()
                             });
                         }
                         break;
@@ -992,7 +992,8 @@ public class MainUI {
                                         fuzzRequestItem.getPayload(),
                                         fuzzRequestItem.getResponseLength(),
                                         fuzzRequestItem.getResponseLengthChange(),
-                                        fuzzRequestItem.getResponseCode()
+                                        fuzzRequestItem.getResponseCode(),
+                                        fuzzRequestItem.getResponseTime()
                                 });
                             }
                             fuzzRequestItemTable.updateUI();
