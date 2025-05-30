@@ -1,5 +1,6 @@
 package com.chave.service;
 
+import burp.api.montoya.core.ByteArray;
 import burp.api.montoya.http.handler.HttpRequestToBeSent;
 import burp.api.montoya.http.message.HttpRequestResponse;
 import burp.api.montoya.http.message.params.HttpParameter;
@@ -161,10 +162,9 @@ public class AutoFuzzService {
                 }
             }
 
-            // TODO 修复中文乱码，获取json字符串
+            // @d1sbb修改，修复中文乱码，获取json字符串
             byte[] bodyBytes = request.body().getBytes();
             String json = new String(bodyBytes, StandardCharsets.UTF_8);
-            //String json = request.body().toString();
 
             // 这里开始处理json
             Object jsonObject = null;
@@ -188,9 +188,9 @@ public class AutoFuzzService {
                         for (String payload : Data.PAYLOAD_LIST) {
                             jsonObject = JSON.parse(json);  // 重新赋值一个未修改过的json
                             String newJsonBody = updateJsonValue(integer, payload, jsonObject, result).get("json").toString();  // 生成新的payload
-                            // TODO 目前直接把newJsonBody里的中文替换为"X"再发包，待解决方案
-                            String replacedBody = newJsonBody.replaceAll("[\\u4e00-\\u9fa5]", "X");  // 替换中文字符，避免乱码
-                            HttpRequest newRequest = request.withBody(replacedBody);
+                            //@d1sbb修改，修复json请求包中如果有中文乱码的情况
+                            ByteArray utf8Body = ByteArray.byteArray(newJsonBody.getBytes(StandardCharsets.UTF_8));
+                            HttpRequest newRequest = request.withBody(utf8Body);
                             newRequestToBeSentList.add(newRequest);  // 添加到待发送请求
                             originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem((String) resultKey.get(integer), payload, null, null, null, originRequestItem));  // 添加表格数据
                         }
