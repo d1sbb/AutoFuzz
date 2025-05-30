@@ -37,7 +37,8 @@ public class AutoFuzzMenu implements ContextMenuItemsProvider {
                     executorService.submit(() -> {
                         Main.API.http().sendRequest(request);
                     });
-                    executorService.shutdownNow();
+                    //修复第二次发送同一个请求路径会失败，提示interrupted 的情况
+                    executorService.shutdown();
 
                 } catch (Exception ex) {
                     Main.LOG.logToError("右键主动fuzz出现异常: " + ex.getMessage());
