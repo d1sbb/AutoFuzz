@@ -241,8 +241,13 @@ public class AutoFuzzService {
             // 获取返回包时间信息
             Optional<TimingData> timingOpt = httpRequestResponse.timingData();
             if (timingOpt.isPresent()) {
-                long timeInSeconds = timingOpt.get().timeBetweenRequestSentAndEndOfResponse().toMillis();
-                fuzzRequestItem.setResponseTime(timeInSeconds + "");
+                double timeInSeconds = timingOpt.get().timeBetweenRequestSentAndEndOfResponse().toMillis() / 1000.0;
+                // 如果时间大于2秒 则标记X
+                if (timeInSeconds > 2.0) {
+                    fuzzRequestItem.setResponseTime(String.format("%.3f ↑", timeInSeconds));
+                }else {
+                    fuzzRequestItem.setResponseTime(String.format("%.3f", timeInSeconds));
+                }
             } else {
                 Main.LOG.logToError("[ERROR] 未获取到 timingData");
             }

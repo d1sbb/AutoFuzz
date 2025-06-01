@@ -276,7 +276,7 @@ public class MainUI {
 
 
         // 创建右边表格
-        String[] fuzzRequestItemTableColumnName = {"Param", "Payload", "Length", "Change", "Status", "Time(ms)"};
+        String[] fuzzRequestItemTableColumnName = {"Param", "Payload", "Length", "Change", "Status", "Time(s)"};
         DefaultTableModel fuzzRequestItemTableModel = new DefaultTableModel(fuzzRequestItemTableColumnName, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
