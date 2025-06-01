@@ -72,6 +72,24 @@ public class YamlUtil {
                     }
                 }
 
+                // @d1sbb修改，加载 domain
+                ArrayList<LinkedHashMap> domain = (ArrayList<LinkedHashMap>) map.get("domain");
+                if (domain != null) {
+                    for (LinkedHashMap domainMap : domain) {
+                        Data.DOMAIN_LIST.add((String) domainMap.get("value"));
+                    }
+                }
+
+                // @d1sbb修改，header
+                ArrayList<LinkedHashMap> header = (ArrayList<LinkedHashMap>) map.get("header");
+                if (header != null) {
+                    for (LinkedHashMap headerMap : header) {
+                        String key = (String) headerMap.get("key");
+                        String value = (String) headerMap.get("value");
+                        Data.HEADER_MAP.put(key, value);
+                    }
+                }
+
 
                 Main.LOG.logToOutput("[INFO] 已加载配置文件.");
             }
