@@ -81,6 +81,7 @@ public class MainUI {
     private JCheckBox emptyParamCheckBox;
     private JCheckBox paramURLEncodeCheckBox;
     private JCheckBox unauthCheckBox;
+    private JCheckBox dataAuthCheckBox;
     private JCheckBox appendModCheckBox;
     private JLabel basicTitleLabel;
     private JLabel domainTitleLabel;
@@ -136,6 +137,7 @@ public class MainUI {
         langSupportComponent.add("editAuthHeaderButton");
         langSupportComponent.add("removeAuthHeaderButton");
         langSupportComponent.add("unauthCheckBox");
+        langSupportComponent.add("dataAuthCheckBox");
         langSupportComponent.add("searchButton");
         langSupportComponent.add("cleanSearchResultButton");
     }
@@ -177,6 +179,7 @@ public class MainUI {
         paramURLEncodeCheckBox = new JCheckBox();
         includeSubDomainCheckBox = new JCheckBox();
         unauthCheckBox = new JCheckBox();
+        dataAuthCheckBox = new JCheckBox();
         appendModCheckBox = new JCheckBox();
         addDomainButton = new JButton();
         editDomainButton = new JButton();
@@ -453,6 +456,8 @@ public class MainUI {
         authHeaderOperatePanel.setLayout(authHeaderOperateLayout);
         // 设置未授权访问勾选情况
         unauthCheckBox.setSelected(UserConfig.UNAUTH);
+        // 设置dataAuth勾选情况
+        dataAuthCheckBox.setSelected(UserConfig.DATAAUTH);
         authHeaderOperatePanel.add(addAuthHeaderButton, Component.CENTER_ALIGNMENT);
         authHeaderOperatePanel.add(Box.createVerticalStrut(10));
         authHeaderOperatePanel.add(editAuthHeaderButton, Component.CENTER_ALIGNMENT);
@@ -460,6 +465,7 @@ public class MainUI {
         authHeaderOperatePanel.add(removeAuthHeaderButton, Component.CENTER_ALIGNMENT);
         authHeaderOperatePanel.add(Box.createVerticalStrut(10));
         authHeaderOperatePanel.add(unauthCheckBox, Component.CENTER_ALIGNMENT);
+        authHeaderOperatePanel.add(dataAuthCheckBox, Component.CENTER_ALIGNMENT);
         authHeaderMainPanel.add(Box.createHorizontalStrut(5));
         authHeaderMainPanel.add(authHeaderOperatePanel);
         // 初始化header表格
@@ -845,7 +851,18 @@ public class MainUI {
                 YamlUtil.exportToYaml();
             }
         });
-
+        // 包含子域名复选框监听器
+        dataAuthCheckBox.addItemListener(new ItemListener() {
+            @Override
+            public void itemStateChanged(ItemEvent e) {
+                if (e.getStateChange() == ItemEvent.SELECTED) {
+                    UserConfig.DATAAUTH = Boolean.TRUE;
+                } else if (e.getStateChange() == ItemEvent.DESELECTED) {
+                    UserConfig.DATAAUTH = Boolean.FALSE;
+                }
+                YamlUtil.exportToYaml();
+            }
+        });
         // 查找作用域下拉框监听器
         searchScopeComboBox.addActionListener(new ActionListener() {
             @Override

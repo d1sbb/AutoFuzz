@@ -28,7 +28,76 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class AutoFuzzService {
+    /**
+     * 根据 Data.HEADER_MAP 里的参数名和对应替换值，批量更新请求参数（URL、表单、json参数）
+     *
+     * @param request 原始请求
+     * @param replaceMap Map，key 是参数名，value 是要替换成的值（比如 ""）
+     * @return 新的 HttpRequest
+     */
+    public static HttpRequest replaceParamsByMap(HttpRequest request, Map<String, String> replaceMap, boolean isEmpty) {
+        if (!UserConfig.DATAAUTH) {return request;}  // 如果未开启dataAuth直接返回
 
+        HttpRequest newRequest = request;
+
+        List<ParsedHttpParameter> params = request.parameters();
+        String contentType = request.headerValue("Content-Type");
+        String body = new String(request.body().getBytes(), StandardCharsets.UTF_8);
+        String newBody;
+        JSONObject json = null;
+        if (contentType.contains("application/json")) {
+            json = JSONObject.parseObject(body);
+        }
+        for (HttpParameter param : params) {
+            String name = param.name();
+            HttpParameterType type = param.type();
+            if (contentType.contains("application/json") && json != null) {
+                try {
+                    String newValue = isEmpty ? "" : replaceMap.get(name);
+                    if (replaceMap.containsKey(name)) {
+                        recursiveReplace(json, name, newValue);
+                    }
+                    newBody = json.toJSONString();
+                    newRequest = newRequest.withBody(ByteArray.byteArray(newBody.getBytes(StandardCharsets.UTF_8)));
+                } catch (Exception e) {
+                    Main.LOG.logToError("JSON 解析失败: " + e.getMessage());
+                }
+            }
+            // 如果请求参数名在replaceMap里，进行替换
+            if (replaceMap.containsKey(name) &&
+                    (type == HttpParameterType.URL || type == HttpParameterType.BODY)) {
+                String newValue = isEmpty ? "" : replaceMap.get(name);
+
+                HttpParameter newParam = (type == HttpParameterType.URL)
+                        ? HttpParameter.urlParameter(name, newValue)
+                        : HttpParameter.bodyParameter(name, newValue);
+
+                newRequest = newRequest.withUpdatedParameters(newParam);
+            }
+        }
+
+
+        return newRequest;
+    }
+    //寻找json里所有的key并替换
+    public static void recursiveReplace(JSONObject json, String keyToReplace, String newValue) {
+        for (Map.Entry<String, Object> entry : json.entrySet()) {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+
+            if (key.equals(keyToReplace)) {
+                json.put(key, newValue);
+            } else if (value instanceof JSONObject) {
+                recursiveReplace((JSONObject) value, keyToReplace, newValue);
+            } else if (value instanceof JSONArray) {
+                for (Object item : (JSONArray) value) {
+                    if (item instanceof JSONObject) {
+                        recursiveReplace((JSONObject) item, keyToReplace, newValue);
+                    }
+                }
+            }
+        }
+    }
     // 做一些准备工作  解析参数  准备待发送请求列表  初始化表格数据
     public synchronized void preFuzz(HttpRequest request) throws UnsupportedEncodingException, MalformedURLException {
         // 如果没有参数 直接返回 //@d1sbb修改，如果Auth Header没有设置，则不进行fuzz
@@ -67,7 +136,7 @@ public class AutoFuzzService {
             // 如果设置了header 自动开始检查
             if (Data.HEADER_MAP.size() != 0) {
                 if (UserConfig.UNAUTH) {  // 如果开启未授权检查 则去除对应header
-                    HttpRequest newRequest = request;
+                    HttpRequest newRequest = replaceParamsByMap(request, Data.HEADER_MAP, true);  // 替换包含Data.HEADER_MAP.entrySet()的参数进行置空
                     for (Map.Entry<String, String> entry : Data.HEADER_MAP.entrySet()) {  // 去除所有设置的header
                         newRequest = newRequest.withRemovedHeader(entry.getKey());
                     }
@@ -75,7 +144,7 @@ public class AutoFuzzService {
                     originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*unauth*", null, null, null, null, originRequestItem));
                 }
 
-                HttpRequest newRequest = request;
+                HttpRequest newRequest = replaceParamsByMap(request, Data.HEADER_MAP, false);  // 替换包含Data.HEADER_MAP.entrySet()的参数
                 for (Map.Entry<String, String> entry : Data.HEADER_MAP.entrySet()) {  // 替换掉所有header
                     newRequest = newRequest.withHeader(entry.getKey(), entry.getValue());
                 }
@@ -116,7 +185,7 @@ public class AutoFuzzService {
             // 如果设置了header 自动开始检查
             if (Data.HEADER_MAP.size() != 0) {
                 if (UserConfig.UNAUTH) {  // 如果开启未授权检查 则去除对应header
-                    HttpRequest newRequest = request;
+                    HttpRequest newRequest = replaceParamsByMap(request, Data.HEADER_MAP, true);  // 替换包含Data.HEADER_MAP.entrySet()的参数进行置空
                     for (Map.Entry<String, String> entry : Data.HEADER_MAP.entrySet()) {  // 去除所有设置的header
                         newRequest = newRequest.withRemovedHeader(entry.getKey());
                     }
@@ -124,7 +193,7 @@ public class AutoFuzzService {
                     originRequestItem.getFuzzRequestArrayList().add(new FuzzRequestItem("*HEADER*", "*unauth*", null, null, null, null, originRequestItem));
                 }
 
-                HttpRequest newRequest = request;
+                HttpRequest newRequest = replaceParamsByMap(request, Data.HEADER_MAP, false);  // 替换包含Data.HEADER_MAP.entrySet()的参数
                 for (Map.Entry<String, String> entry : Data.HEADER_MAP.entrySet()) {  // 替换掉所有header
                     newRequest = newRequest.withHeader(entry.getKey(), entry.getValue());
                 }

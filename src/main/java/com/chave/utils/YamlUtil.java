@@ -46,6 +46,8 @@ public class YamlUtil {
                 UserConfig.APPEND_MOD = (Boolean) payloadSetting.get("append_mod");
                 UserConfig.PARAM_URL_ENCODE = (Boolean) payloadSetting.get("param_url_encode");
                 UserConfig.UNAUTH = (Boolean) authHeaderSetting.get("unauth");
+                Object dataAuthValue = authHeaderSetting.get("dataAuth");
+                UserConfig.DATAAUTH = (dataAuthValue instanceof Boolean) ? (Boolean) dataAuthValue : false;
 
 
                 // 加载payload
@@ -121,6 +123,7 @@ public class YamlUtil {
         payloadSetting.put("append_mod", UserConfig.APPEND_MOD);
         payloadSetting.put("param_url_encode", UserConfig.PARAM_URL_ENCODE);
         authHeaderSetting.put("unauth", UserConfig.UNAUTH);
+        authHeaderSetting.put("dataAuth", UserConfig.DATAAUTH);
         configMap.put("basic_setting", basicSetting);
         configMap.put("domain_setting", domainSetting);
         configMap.put("payload_setting", payloadSetting);
