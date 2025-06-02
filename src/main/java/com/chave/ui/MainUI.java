@@ -18,6 +18,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -1110,8 +1111,8 @@ public class MainUI {
             for (Map.Entry<Integer, OriginRequestItem> originRequestItemEntry : ORIGIN_REQUEST_TABLE_DATA.entrySet()) {
                 OriginRequestItem originRequestItem = originRequestItemEntry.getValue();
                 if (originRequestItem.equals(selectOriginRequestItem) && originRequestItem.getId().equals(id)) {
-                    String originRequestString = originRequestItem.getOriginRequest().toString();
-                    String originResponseString = originRequestItem.getOriginResponse().toString();
+                    String originRequestString = new String(originRequestItem.getOriginRequest().toByteArray().getBytes(), StandardCharsets.UTF_8);
+                    String originResponseString = new String(originRequestItem.getOriginResponse().toByteArray().getBytes(), StandardCharsets.UTF_8);
                     // 进行不区分大小写的比对originRequest
                     if (originRequestString.toLowerCase().contains(keyword.toLowerCase()) && searchScope.equals(SearchScope.REQUEST)) {
                         highlightMap.put(i, new ArrayList<>());
@@ -1123,8 +1124,8 @@ public class MainUI {
                     ArrayList<FuzzRequestItem> fuzzRequestArrayList = originRequestItem.getFuzzRequestArrayList();
                     int index = 0;
                     for (FuzzRequestItem fuzzRequestItem : fuzzRequestArrayList) {
-                        String fuzzRequestString = fuzzRequestItem.getFuzzRequestResponse().request().toString();
-                        String fuzzResponseString = fuzzRequestItem.getFuzzRequestResponse().response().toString();
+                        String fuzzRequestString = new String(fuzzRequestItem.getFuzzRequestResponse().request().toByteArray().getBytes(), StandardCharsets.UTF_8);
+                        String fuzzResponseString = new String(fuzzRequestItem.getFuzzRequestResponse().response().toByteArray().getBytes(), StandardCharsets.UTF_8);
                         if (fuzzRequestString.toLowerCase().contains(keyword.toLowerCase()) && searchScope.equals(SearchScope.REQUEST)) {
                             if (highlightMap.containsKey(i)) {
                                 highlightMap.get(i).add(index);
