@@ -298,8 +298,14 @@ public class AutoFuzzService {
         for (HttpRequest request : requestToBeSentList) {
             HttpRequestResponse httpRequestResponse = Main.API.http().sendRequest(request);
             FuzzRequestItem fuzzRequestItem = fuzzRequestItemArrayList.get(i);
-            fuzzRequestItem.setFuzzRequestResponse(httpRequestResponse);  // 与table数据关联
-
+            //如果是galaxy插件要加密的明文，直接将明文传到fuzzRequestItem中，而非明文。
+            if (request.hasHeader("X-Galaxy-Http-Hook")) {
+                fuzzRequestItem.setFuzzRequest(request);
+            } else {
+                // 默认设置
+                fuzzRequestItem.setFuzzRequest(httpRequestResponse.request());  // 与table数据关联
+            }
+            fuzzRequestItem.setFuzzResponse(httpRequestResponse.response());  // 与table数据关联
             // 获取返回包长度信息
             String responseLength = httpRequestResponse.response().toString().length() + "";
             int lengthChange = httpRequestResponse.response().toString().length() - Integer.parseInt(fuzzRequestItem.getOriginRequestItem().getResponseLength());

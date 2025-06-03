@@ -1,6 +1,8 @@
 package com.chave.bean;
 
 import burp.api.montoya.http.message.HttpRequestResponse;
+import burp.api.montoya.http.message.requests.HttpRequest;
+import burp.api.montoya.http.message.responses.HttpResponse;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,7 +16,8 @@ public class FuzzRequestItem {
     private String responseCode;
     private String responseTime;
     private OriginRequestItem originRequestItem;
-    private HttpRequestResponse fuzzRequestResponse;
+    private HttpRequest fuzzRequest;
+    private HttpResponse fuzzResponse;
 
     public FuzzRequestItem(String param, String payload, String responseLength, String responseLengthChange, String responseCode, String responseTime, OriginRequestItem originRequestItem) {
         this.param = param;

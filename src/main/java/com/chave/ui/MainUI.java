@@ -942,8 +942,8 @@ public class MainUI {
                     if (item.equals(tempItem) && item.getId().equals(id)) {
                         if (fuzzRow < item.getFuzzRequestArrayList().size()) {
                             FuzzRequestItem fuzzItem = item.getFuzzRequestArrayList().get(fuzzRow);
-                            requestEditor.setRequest(fuzzItem.getFuzzRequestResponse().request());
-                            responseEditor.setResponse(fuzzItem.getFuzzRequestResponse().response());
+                            requestEditor.setRequest(fuzzItem.getFuzzRequest());
+                            responseEditor.setResponse(fuzzItem.getFuzzResponse());
                         }
                         break;
                     }
@@ -1141,8 +1141,8 @@ public class MainUI {
                     ArrayList<FuzzRequestItem> fuzzRequestArrayList = originRequestItem.getFuzzRequestArrayList();
                     int index = 0;
                     for (FuzzRequestItem fuzzRequestItem : fuzzRequestArrayList) {
-                        String fuzzRequestString = new String(fuzzRequestItem.getFuzzRequestResponse().request().toByteArray().getBytes(), StandardCharsets.UTF_8);
-                        String fuzzResponseString = new String(fuzzRequestItem.getFuzzRequestResponse().response().toByteArray().getBytes(), StandardCharsets.UTF_8);
+                        String fuzzRequestString = new String(fuzzRequestItem.getFuzzRequest().toByteArray().getBytes(), StandardCharsets.UTF_8);
+                        String fuzzResponseString = new String(fuzzRequestItem.getFuzzResponse().toByteArray().getBytes(), StandardCharsets.UTF_8);
                         if (fuzzRequestString.toLowerCase().contains(keyword.toLowerCase()) && searchScope.equals(SearchScope.REQUEST)) {
                             if (highlightMap.containsKey(i)) {
                                 highlightMap.get(i).add(index);
